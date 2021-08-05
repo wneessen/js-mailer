@@ -9,6 +9,7 @@ import (
 	"github.com/wneessen/js-mailer/http_error"
 	"net/http"
 	"strings"
+	"time"
 )
 
 func (a *ApiRequest) SendForm(w http.ResponseWriter, r *http.Request) {
@@ -112,7 +113,8 @@ func (a *ApiRequest) SendForm(w http.ResponseWriter, r *http.Request) {
 	// Send the mail message
 	mailDailer := mail.NewDialer(formObj.Server.Host, formObj.Server.Port, formObj.Server.Username,
 		formObj.Server.Password)
-	mailDailer.StartTLSPolicy = mail.MandatoryStartTLS
+	mailDailer.Timeout = time.Second * 5
+	mailDailer.StartTLSPolicy = mail.OpportunisticStartTLS
 	if err := mailDailer.DialAndSend(mailMsg); err != nil {
 		l.Errorf("Could not send mail message: %s", err)
 		http_error.ErrorJson(w, 500, err.Error())
