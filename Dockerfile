@@ -11,6 +11,7 @@ FROM scratch
 LABEL maintainer="wn@neessen.net"
 COPY ["build-files/passwd", "/etc/passwd"]
 COPY ["build-files/group", "/etc/group"]
+COPY --from=builder ["/etc/ssl/certs/ca-certificates.crt", "/etc/ssl/cert.pem"]
 COPY --chown=js-mailer ["etc/js-mailer", "/etc/js-mailer/"]
 COPY --from=builder --chown=js-mailer ["/builddir/js-mailer", "/js-mailer/js-mailer"]
 WORKDIR /js-mailer
