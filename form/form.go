@@ -25,7 +25,7 @@ type Form struct {
 		Username string
 		Password string
 		Timeout  string `fig:"timeout" default:"5s"`
-		ForceTLS bool   `fig:"force_tls" default:true`
+		ForceTLS bool   `fig:"force_tls"`
 	}
 }
 

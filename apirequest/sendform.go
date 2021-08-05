@@ -114,7 +114,7 @@ func (a *ApiRequest) SendForm(w http.ResponseWriter, r *http.Request) {
 	var serverTimeout time.Duration
 	serverTimeout, err = time.ParseDuration(formObj.Server.Timeout)
 	if err != nil {
-		l.Warn("Could not parse configured server timeout: %s", err)
+		l.Warnf("Could not parse configured server timeout: %s", err)
 		serverTimeout = time.Second * 5
 	}
 	mailDailer := mail.NewDialer(formObj.Server.Host, formObj.Server.Port, formObj.Server.Username,

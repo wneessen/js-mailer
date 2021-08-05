@@ -13,6 +13,8 @@
         "host": "mail.example.com",
         "port": 25,
         "username": "website@example.com",
-        "password": "verySecurePassword"
+        "password": "verySecurePassword",
+        "timeout": "5s",
+        "force_tls": true
     }
 }
