@@ -15,8 +15,9 @@ type Form struct {
 	Sender     string   `fig:"sender" validate:"required"`
 	Domains    []string `fig:"domains" validate:"required"`
 	Content    struct {
-		Subject string
-		Fields  []string
+		Subject        string
+		Fields         []string
+		RequiredFields []string `fig:"required_fields"`
 	}
 	Server struct {
 		Host     string `fig:"host" validate:"required"`

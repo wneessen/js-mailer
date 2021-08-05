@@ -64,6 +64,21 @@ func (a *ApiRequest) SendForm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Make sure all required fields are set
+	// Maybe we can build some kind of validator here
+	missingFields := []string{}
+	for _, f := range formObj.Content.RequiredFields {
+		if r.Form.Get(f) == "" {
+			missingFields = append(missingFields, f)
+		}
+	}
+	if len(missingFields) > 0 {
+		l.Errorf("Required fields missing: %#s", missingFields)
+		http_error.MissingFieldsJson(w, 400, "Required fields missing", missingFields)
+		return
+	}
+
+	// Check the token
 	reqOrigin := r.Header.Get("origin")
 	if reqOrigin == "" {
 		l.Errorf("No origin domain set in HTTP request")

@@ -15,3 +15,8 @@
 # vendor/
 
 js-mailer
+!etc/js-mailer
+builds
+!builds/.gitkeep
+docker-images
+!docker-images/.gitkeep

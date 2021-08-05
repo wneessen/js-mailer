@@ -1,0 +1,18 @@
+{
+    "id": 1,
+    "secret": "SuperSecretsString",
+    "recipients": ["who@cares.net"],
+    "sender": "website@example.com",
+    "domains": ["www.example.com", "example.com"],
+    "content": {
+        "subject": "New message through the www.example.com contact form",
+        "fields": ["name", "email", "message"],
+        "required_fields": ["name", "email"]
+    },
+    "server": {
+        "host": "mail.example.com",
+        "port": 25,
+        "username": "website@example.com",
+        "password": "verySecurePassword"
+    }
+}
