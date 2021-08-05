@@ -9,7 +9,6 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -ldflag
 ## Create scratch image
 FROM scratch
 LABEL maintainer="wn@neessen.net"
-ENV RELEASE_VERSION=0.1.0
 COPY ["build-files/passwd", "/etc/passwd"]
 COPY ["build-files/group", "/etc/group"]
 COPY --chown=js-mailer ["etc/js-mailer", "/etc/js-mailer/"]
@@ -17,5 +16,5 @@ COPY --from=builder --chown=js-mailer ["/builddir/js-mailer", "/js-mailer/js-mai
 WORKDIR /js-mailer
 USER js-mailer
 VOLUME ["/etc/js-mailer"]
-EXPOSE 8080
+EXPOSE 8765
 ENTRYPOINT ["/js-mailer/js-mailer"]
