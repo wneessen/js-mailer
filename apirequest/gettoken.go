@@ -52,7 +52,8 @@ func (a *ApiRequest) GetToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, d := range formObj.Domains {
-		if d == reqOrigin {
+		if d == reqOrigin || d == fmt.Sprintf("http://%s", reqOrigin) ||
+			d == fmt.Sprintf("https://%s", reqOrigin) {
 			isValid = true
 		}
 	}
