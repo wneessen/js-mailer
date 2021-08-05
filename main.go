@@ -45,11 +45,11 @@ func serve(c *config.Config) {
 	httpMux := http.NewServeMux()
 	httpMux.HandleFunc("/", apiReq.RequestHandler)
 	httpSrv := &http.Server{
-		ReadTimeout:       5 * time.Second,
-		WriteTimeout:      5 * time.Second,
-		IdleTimeout:       15 * time.Second,
-		ReadHeaderTimeout: 5 * time.Second,
-		Handler:           http.TimeoutHandler(httpMux, time.Second*15, ""),
+		ReadTimeout:       50 * time.Second,
+		WriteTimeout:      50 * time.Second,
+		IdleTimeout:       150 * time.Second,
+		ReadHeaderTimeout: 50 * time.Second,
+		Handler:           http.TimeoutHandler(httpMux, time.Second*150, ""),
 		Addr:              fmt.Sprintf("%s:%d", c.Api.Addr, c.Api.Port),
 	}
 	if err := httpSrv.ListenAndServe(); err != nil {

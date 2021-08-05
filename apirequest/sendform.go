@@ -113,7 +113,7 @@ func (a *ApiRequest) SendForm(w http.ResponseWriter, r *http.Request) {
 	// Send the mail message
 	mailDailer := mail.NewDialer(formObj.Server.Host, formObj.Server.Port, formObj.Server.Username,
 		formObj.Server.Password)
-	mailDailer.Timeout = time.Second * 5
+	mailDailer.Timeout = time.Second * 50
 	mailDailer.StartTLSPolicy = mail.OpportunisticStartTLS
 	mailSender, err := mailDailer.Dial()
 	if err != nil {
