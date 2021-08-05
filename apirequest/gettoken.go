@@ -76,7 +76,7 @@ func (a *ApiRequest) GetToken(w http.ResponseWriter, r *http.Request) {
 		Url:        fmt.Sprintf("%s://%s/api/v1/send", a.Scheme, r.Host),
 	}
 	if err := a.Cache.Set(tokenSha, respToken); err != nil {
-		l.Errorf("Failed to store response token in cache: %s")
+		l.Errorf("Failed to store response token in cache: %s", err)
 		http_error.ErrorJson(w, 500, "Internal Server Error")
 		return
 	}

@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/wneessen/js-mailer/http_error"
 	"net/http"
+	"strings"
 )
 
 func (a *ApiRequest) SendForm(w http.ResponseWriter, r *http.Request) {
@@ -73,7 +74,7 @@ func (a *ApiRequest) SendForm(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if len(missingFields) > 0 {
-		l.Errorf("Required fields missing: %#s", missingFields)
+		l.Errorf("Required fields missing: %s", strings.Join(missingFields, ", "))
 		http_error.MissingFieldsJson(w, 400, "Required fields missing", missingFields)
 		return
 	}
