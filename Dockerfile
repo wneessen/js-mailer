@@ -1,10 +1,19 @@
+## Build first
+FROM golang:alpine as builder
+RUN mkdir /builddir
+ADD . /builddir/
+WORKDIR /builddir
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -ldflags '-w -s -extldflags "-static"' -o js-mailer \
+    github.com/wneessen/js-mailer
+
+## Create scratch image
 FROM scratch
 LABEL maintainer="wn@neessen.net"
-ENV RELEASE_VERSION={{BUILDVER}}
+ENV RELEASE_VERSION=0.1.0
 COPY ["build-files/passwd", "/etc/passwd"]
 COPY ["build-files/group", "/etc/group"]
 COPY --chown=js-mailer ["etc/js-mailer", "/etc/js-mailer/"]
-COPY --chown=js-mailer ["builds/$RELEASE_VERSION/js-mailer", "/js-mailer/js-mailer"]
+COPY --from=builder --chown=js-mailer ["/builddir/js-mailer", "/js-mailer/js-mailer"]
 WORKDIR /js-mailer
 USER js-mailer
 VOLUME ["/etc/js-mailer"]
