@@ -111,17 +111,29 @@ func (a *ApiRequest) SendForm(w http.ResponseWriter, r *http.Request) {
 	mailMsg.SetBody("text/plain", mailBody)
 
 	// Send the mail message
+	var serverTimeout time.Duration
+	serverTimeout, err = time.ParseDuration(formObj.Server.Timeout)
+	if err != nil {
+		l.Warn("Could not parse configured server timeout: %s", err)
+		serverTimeout = time.Second * 5
+	}
 	mailDailer := mail.NewDialer(formObj.Server.Host, formObj.Server.Port, formObj.Server.Username,
 		formObj.Server.Password)
-	mailDailer.Timeout = time.Second * 50
-	mailDailer.StartTLSPolicy = mail.OpportunisticStartTLS
+	mailDailer.Timeout = serverTimeout
+	if formObj.Server.ForceTLS {
+		mailDailer.StartTLSPolicy = mail.MandatoryStartTLS
+	}
 	mailSender, err := mailDailer.Dial()
 	if err != nil {
 		l.Errorf("Could not connect to configured mail server: %s", err)
 		http_error.ErrorJson(w, 500, err.Error())
 		return
 	}
-	defer func() { _ = mailSender.Close() }()
+	defer func() {
+		if err := mailSender.Close(); err != nil {
+			l.Errorf("Failed to close mail server connection: %s", err)
+		}
+	}()
 
 	if err := mail.Send(mailSender, mailMsg); err != nil {
 		l.Errorf("Could not send mail message: %s", err)
