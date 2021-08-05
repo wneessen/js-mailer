@@ -6,7 +6,7 @@ import (
 	"github.com/ReneKroon/ttlcache/v2"
 	"github.com/go-mail/mail"
 	log "github.com/sirupsen/logrus"
-	"github.com/wneessen/js-mailer/http_error"
+	"github.com/wneessen/js-mailer/response"
 	"net/http"
 	"strings"
 	"time"
@@ -20,17 +20,17 @@ func (a *ApiRequest) SendForm(w http.ResponseWriter, r *http.Request) {
 	var formId string
 	if err := r.ParseMultipartForm(a.Config.Forms.MaxLength); err != nil {
 		l.Errorf("Failed to parse form parameters: %s", err)
-		http_error.ErrorJson(w, 500, "Internal Server Error")
+		response.ErrorJson(w, 500, "Internal Server Error")
 		return
 	}
 	formId = r.Form.Get("formid")
 	if formId == "" {
-		http_error.ErrorJson(w, 400, "Bad Request")
+		response.ErrorJson(w, 400, "Bad Request")
 		return
 	}
 	sendToken := r.Form.Get("token")
 	if sendToken == "" {
-		http_error.ErrorJson(w, 400, "Bad Request")
+		response.ErrorJson(w, 400, "Bad Request")
 		return
 	}
 
@@ -38,18 +38,18 @@ func (a *ApiRequest) SendForm(w http.ResponseWriter, r *http.Request) {
 	var tokenRespObj TokenResponseJson
 	cacheObj, err := a.Cache.Get(sendToken)
 	if err == ttlcache.ErrNotFound {
-		http_error.ErrorJson(w, 404, "Not Found")
+		response.ErrorJson(w, 404, "Not Found")
 		return
 	}
 	if err != nil && err != ttlcache.ErrNotFound {
-		http_error.ErrorJson(w, 500, "Internal Server Error")
+		response.ErrorJson(w, 500, "Internal Server Error")
 		return
 	}
 	if cacheObj != nil {
 		tokenRespObj = cacheObj.(TokenResponseJson)
 	}
 	if fmt.Sprintf("%d", tokenRespObj.FormId) != formId {
-		http_error.ErrorJson(w, 400, "Bad Request")
+		response.ErrorJson(w, 400, "Bad Request")
 		return
 	}
 	defer func() {
@@ -62,7 +62,7 @@ func (a *ApiRequest) SendForm(w http.ResponseWriter, r *http.Request) {
 	formObj, err := a.GetForm(fmt.Sprintf("%d", tokenRespObj.FormId))
 	if err != nil {
 		l.Errorf("Failed get formObj: %s", err)
-		http_error.ErrorJson(w, 500, "Internal Server Error")
+		response.ErrorJson(w, 500, "Internal Server Error")
 		return
 	}
 
@@ -76,7 +76,7 @@ func (a *ApiRequest) SendForm(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(missingFields) > 0 {
 		l.Errorf("Required fields missing: %s", strings.Join(missingFields, ", "))
-		http_error.MissingFieldsJson(w, 400, "Required fields missing", missingFields)
+		response.MissingFieldsJson(w, 400, "Required fields missing", missingFields)
 		return
 	}
 
@@ -84,7 +84,7 @@ func (a *ApiRequest) SendForm(w http.ResponseWriter, r *http.Request) {
 	reqOrigin := r.Header.Get("origin")
 	if reqOrigin == "" {
 		l.Errorf("No origin domain set in HTTP request")
-		http_error.ErrorJson(w, 401, "Unauthorized")
+		response.ErrorJson(w, 401, "Unauthorized")
 		return
 	}
 	tokenText := fmt.Sprintf("%s_%d_%d_%d_%s", reqOrigin, tokenRespObj.CreateTime, tokenRespObj.ExpireTime,
@@ -92,7 +92,7 @@ func (a *ApiRequest) SendForm(w http.ResponseWriter, r *http.Request) {
 	tokenSha := fmt.Sprintf("%x", sha256.Sum256([]byte(tokenText)))
 	if tokenSha != sendToken {
 		l.Errorf("No origin domain set in HTTP request")
-		http_error.ErrorJson(w, 401, "Unauthorized")
+		response.ErrorJson(w, 401, "Unauthorized")
 		return
 	}
 
@@ -126,7 +126,7 @@ func (a *ApiRequest) SendForm(w http.ResponseWriter, r *http.Request) {
 	mailSender, err := mailDailer.Dial()
 	if err != nil {
 		l.Errorf("Could not connect to configured mail server: %s", err)
-		http_error.ErrorJson(w, 500, err.Error())
+		response.ErrorJson(w, 500, err.Error())
 		return
 	}
 	defer func() {
@@ -134,10 +134,11 @@ func (a *ApiRequest) SendForm(w http.ResponseWriter, r *http.Request) {
 			l.Errorf("Failed to close mail server connection: %s", err)
 		}
 	}()
-
 	if err := mail.Send(mailSender, mailMsg); err != nil {
 		l.Errorf("Could not send mail message: %s", err)
-		http_error.ErrorJson(w, 500, err.Error())
+		response.ErrorJson(w, 500, err.Error())
 		return
 	}
+
+	response.SuccessJson(w, 200, &formObj)
 }

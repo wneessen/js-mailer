@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	log "github.com/sirupsen/logrus"
-	"github.com/wneessen/js-mailer/http_error"
+	"github.com/wneessen/js-mailer/response"
 	"net/http"
 	"time"
 )
@@ -26,12 +26,12 @@ func (a *ApiRequest) GetToken(w http.ResponseWriter, r *http.Request) {
 	var formId string
 	if err := r.ParseMultipartForm(a.Config.Forms.MaxLength); err != nil {
 		l.Errorf("Failed to parse form parameters: %s", err)
-		http_error.ErrorJson(w, 500, "Internal Server Error")
+		response.ErrorJson(w, 500, "Internal Server Error")
 		return
 	}
 	formId = r.Form.Get("formid")
 	if formId == "" {
-		http_error.ErrorJson(w, 400, "Bad Request")
+		response.ErrorJson(w, 400, "Bad Request")
 		return
 	}
 
@@ -39,7 +39,7 @@ func (a *ApiRequest) GetToken(w http.ResponseWriter, r *http.Request) {
 	formObj, err := a.GetForm(formId)
 	if err != nil {
 		l.Errorf("Failed get formObj: %s", err)
-		http_error.ErrorJson(w, 500, "Internal Server Error")
+		response.ErrorJson(w, 500, "Internal Server Error")
 		return
 	}
 
@@ -48,7 +48,7 @@ func (a *ApiRequest) GetToken(w http.ResponseWriter, r *http.Request) {
 	reqOrigin := r.Header.Get("origin")
 	if reqOrigin == "" {
 		l.Errorf("No origin domain set in HTTP request")
-		http_error.ErrorJson(w, 401, "Unauthorized")
+		response.ErrorJson(w, 401, "Unauthorized")
 		return
 	}
 	for _, d := range formObj.Domains {
@@ -58,7 +58,7 @@ func (a *ApiRequest) GetToken(w http.ResponseWriter, r *http.Request) {
 	}
 	if !isValid {
 		l.Errorf("Domain %q not in allowed domains list for form %d", reqOrigin, formObj.Id)
-		http_error.ErrorJson(w, 401, "Unauthorized")
+		response.ErrorJson(w, 401, "Unauthorized")
 		return
 	}
 	w.Header().Set("Access-Control-Allow-Origin", reqOrigin)
@@ -77,12 +77,12 @@ func (a *ApiRequest) GetToken(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := a.Cache.Set(tokenSha, respToken); err != nil {
 		l.Errorf("Failed to store response token in cache: %s", err)
-		http_error.ErrorJson(w, 500, "Internal Server Error")
+		response.ErrorJson(w, 500, "Internal Server Error")
 		return
 	}
 	if err := json.NewEncoder(w).Encode(respToken); err != nil {
 		l.Errorf("Failed to encode response token JSON: %s", err)
-		http_error.ErrorJson(w, 500, "Internal Server Error")
+		response.ErrorJson(w, 500, "Internal Server Error")
 		return
 	}
 }

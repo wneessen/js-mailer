@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-const VERSION = "0.1.0"
+const VERSION = "0.1.1"
 
 func main() {
 	// Initialize everything

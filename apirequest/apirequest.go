@@ -4,7 +4,7 @@ import (
 	"github.com/ReneKroon/ttlcache/v2"
 	log "github.com/sirupsen/logrus"
 	"github.com/wneessen/js-mailer/config"
-	"github.com/wneessen/js-mailer/http_error"
+	"github.com/wneessen/js-mailer/response"
 	"net/http"
 )
 
@@ -46,6 +46,6 @@ func (a *ApiRequest) RequestHandler(w http.ResponseWriter, r *http.Request) {
 		a.SendForm(w, r)
 		return
 	default:
-		http_error.ErrorJson(w, 404, "Not found")
+		response.ErrorJson(w, 404, "Not found")
 	}
 }
