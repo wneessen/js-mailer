@@ -115,7 +115,15 @@ func (a *ApiRequest) SendForm(w http.ResponseWriter, r *http.Request) {
 		formObj.Server.Password)
 	mailDailer.Timeout = time.Second * 5
 	mailDailer.StartTLSPolicy = mail.OpportunisticStartTLS
-	if err := mailDailer.DialAndSend(mailMsg); err != nil {
+	mailSender, err := mailDailer.Dial()
+	if err != nil {
+		l.Errorf("Could not connect to configured mail server: %s", err)
+		http_error.ErrorJson(w, 500, err.Error())
+		return
+	}
+	defer func() { _ = mailSender.Close() }()
+
+	if err := mail.Send(mailSender, mailMsg); err != nil {
 		l.Errorf("Could not send mail message: %s", err)
 		http_error.ErrorJson(w, 500, err.Error())
 		return
