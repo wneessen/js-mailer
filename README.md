@@ -145,3 +145,8 @@ The API response to a send request (`/api/v1/send`) looks like this:
 * `status_code (type: uint32)`: The HTTP status code
 * `success_message (type: string)`: The success message
 * `form_id (type: uint)`: The form id of the current form (for reference)
+
+## Example implementation
+
+A very basic HTML/JS example implementation for the `JS-Mailer` system can be found in
+the [code-example](code-examples/) directory
