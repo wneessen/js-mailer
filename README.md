@@ -115,7 +115,7 @@ the API will then validate that all submitted data is correct and submit the for
 
 ### API responses
 #### Token request
-The API response to a token request looks like this:
+The API response to a token request (`/api/v1/token`)looks like this:
 
 ```json
 {
@@ -133,6 +133,8 @@ The API response to a token request looks like this:
 * `url (type: string)`: API endpoint to set your form action to
 
 #### Send response
+
+The API response to a send request (`/api/v1/send`) looks like this:
 ```json
 {
   "status_code": 200,
