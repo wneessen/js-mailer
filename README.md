@@ -115,7 +115,7 @@ the API will then validate that all submitted data is correct and submit the for
 
 ### API responses
 #### Token request
-The API response to a token request (`/api/v1/token`)looks like this:
+The API response to a token request (`/api/v1/token`) looks like this:
 
 ```json
 {
