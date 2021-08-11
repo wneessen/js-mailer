@@ -26,7 +26,7 @@ func Field(r *http.Request, f *form.ValidationField) error {
 	case "email":
 		mailRegExp, err := regexp.Compile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 		if err != nil {
-			l.Errorf("Failed to compile email comparsion regexp: %s", err)
+			l.Errorf("Failed to compile email comparison regexp: %s", err)
 			return nil
 		}
 		if !mailRegExp.Match([]byte(r.Form.Get(f.Name))) {
@@ -36,7 +36,7 @@ func Field(r *http.Request, f *form.ValidationField) error {
 	case "number":
 		numRegExp, err := regexp.Compile("^[0-9]+$")
 		if err != nil {
-			l.Errorf("Failed to compile email comparsion regexp: %s", err)
+			l.Errorf("Failed to compile email comparison regexp: %s", err)
 			return nil
 		}
 		if !numRegExp.Match([]byte(r.Form.Get(f.Name))) {
@@ -46,7 +46,7 @@ func Field(r *http.Request, f *form.ValidationField) error {
 	case "bool":
 		boolRegExp, err := regexp.Compile("^(?i)(true|false|0|1)$")
 		if err != nil {
-			l.Errorf("Failed to compile boolean comparsion regexp: %s", err)
+			l.Errorf("Failed to compile boolean comparison regexp: %s", err)
 			return nil
 		}
 		if !boolRegExp.Match([]byte(r.Form.Get(f.Name))) {
