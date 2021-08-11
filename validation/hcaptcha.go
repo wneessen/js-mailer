@@ -15,10 +15,10 @@ type HcaptchaResponseJson struct {
 	Hostname           string `json:"hostname"`
 }
 
-// HcaptchaValidate validates the hCaptcha challenge against the hCaptcha API
-func HcaptchaValidate(c, s string) bool {
+// Hcaptcha validates the hCaptcha challenge against the hCaptcha API
+func Hcaptcha(c, s string) bool {
 	l := log.WithFields(log.Fields{
-		"action": "validation.HcaptchaValidate",
+		"action": "validation.Hcaptcha",
 	})
 
 	// Create a HTTP request

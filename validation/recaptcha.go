@@ -8,17 +8,17 @@ import (
 	"net/url"
 )
 
-// HcaptchaResponseJson reflect the API response from hCaptcha
+// RecaptchaResponseJson reflect the API response from hCaptcha
 type RecaptchaResponseJson struct {
 	Success            bool   `json:"success"`
 	ChallengeTimestamp string `json:"challenge_ts"`
 	Hostname           string `json:"hostname"`
 }
 
-// RecaptchaValidate validates the reCaptcha challenge against the Google API
-func RecaptchaValidate(c, s string) bool {
+// Recaptcha validates the reCaptcha challenge against the Google API
+func Recaptcha(c, s string) bool {
 	l := log.WithFields(log.Fields{
-		"action": "validation.RecaptchaValidate",
+		"action": "validation.Recaptcha",
 	})
 
 	// Create a HTTP request

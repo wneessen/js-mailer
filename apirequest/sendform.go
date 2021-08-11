@@ -75,43 +75,49 @@ func (a *ApiRequest) SendFormValidate(r *http.Request) (int, error) {
 
 	// Make sure all required fields are set
 	// Maybe we can build some kind of validator here
-	var missingFields []string
-	for _, f := range formObj.Content.RequiredFields {
-		if r.Form.Get(f) == "" {
-			l.Warnf("Form includes a honeypot field which is not empty. Denying request")
-			missingFields = append(missingFields, f)
+	var invalidFields []string
+	fieldError := make(map[string]string)
+	for _, f := range formObj.Validation.Fields {
+		if err := validation.Field(r, &f); err != nil {
+			invalidFields = append(invalidFields, f.Name)
+			fieldError[f.Name] = err.Error()
 		}
 	}
-	if len(missingFields) > 0 {
-		l.Errorf("Required fields missing: %s", strings.Join(missingFields, ", "))
-		return 400, fmt.Errorf("required fields missing: %s", strings.Join(missingFields, ", "))
+	if len(invalidFields) > 0 {
+		l.Errorf("Form field validation failed: %s", strings.Join(invalidFields, ", "))
+		var errorMsg []string
+		for _, f := range invalidFields {
+			errorMsg = append(errorMsg, fmt.Sprintf("%s: %s", f, fieldError[f]))
+		}
+		return 400, fmt.Errorf("field(s) validation failed: %s", strings.Join(errorMsg, ", "))
 	}
 
 	// Anti-SPAM honeypot handling
-	if formObj.Content.Honeypot != nil {
-		if r.Form.Get(*formObj.Content.Honeypot) != "" {
+	if formObj.Validation.Honeypot != nil {
+		if r.Form.Get(*formObj.Validation.Honeypot) != "" {
+			l.Warnf("Form includes a honeypot field which is not empty. Denying request")
 			return 400, fmt.Errorf("invalid form data")
 		}
 	}
 
 	// Validate hCaptcha if enabled
-	if formObj.Hcaptcha.Enabled {
+	if formObj.Validation.Hcaptcha.Enabled {
 		hcapResponse := r.Form.Get("h-captcha-response")
 		if hcapResponse == "" {
 			return 400, fmt.Errorf("missing hCaptcha response")
 		}
-		if ok := validation.HcaptchaValidate(hcapResponse, formObj.Hcaptcha.SecretKey); !ok {
+		if ok := validation.Hcaptcha(hcapResponse, formObj.Validation.Hcaptcha.SecretKey); !ok {
 			return 400, fmt.Errorf("hCaptcha challenge-response validation failed")
 		}
 	}
 
 	// Validate reCaptcha if enabled
-	if formObj.Recaptcha.Enabled {
+	if formObj.Validation.Recaptcha.Enabled {
 		recapResponse := r.Form.Get("g-recaptcha-response")
 		if recapResponse == "" {
 			return 400, fmt.Errorf("missing reCaptcha response")
 		}
-		if ok := validation.RecaptchaValidate(recapResponse, formObj.Recaptcha.SecretKey); !ok {
+		if ok := validation.Recaptcha(recapResponse, formObj.Validation.Recaptcha.SecretKey); !ok {
 			return 400, fmt.Errorf("reCaptcha challenge-response validation failed")
 		}
 	}

@@ -15,19 +15,21 @@ type Form struct {
 	Recipients []string `fig:"recipients" validate:"required"`
 	Sender     string   `fig:"sender" validate:"required"`
 	Domains    []string `fig:"domains" validate:"required"`
-	Hcaptcha   struct {
-		Enabled   bool   `fig:"enabled"`
-		SecretKey string `fig:"secret_key"`
-	}
-	Recaptcha struct {
-		Enabled   bool   `fig:"enabled"`
-		SecretKey string `fig:"secret_key"`
+	Validation struct {
+		Hcaptcha struct {
+			Enabled   bool   `fig:"enabled"`
+			SecretKey string `fig:"secret_key"`
+		}
+		Recaptcha struct {
+			Enabled   bool   `fig:"enabled"`
+			SecretKey string `fig:"secret_key"`
+		}
+		Fields   []ValidationField `fig:"fields"`
+		Honeypot *string           `fig:"honeypot"`
 	}
 	Content struct {
-		Subject        string
-		Fields         []string
-		RequiredFields []string `fig:"required_fields"`
-		Honeypot       *string  `fig:"honeypot"`
+		Subject string
+		Fields  []string
 	}
 	Server struct {
 		Host     string `fig:"host" validate:"required"`
@@ -37,6 +39,13 @@ type Form struct {
 		Timeout  string `fig:"timeout" default:"5s"`
 		ForceTLS bool   `fig:"force_tls"`
 	}
+}
+
+// ValidationField reflects the struct for a form validation field
+type ValidationField struct {
+	Name     string `fig:"name" validate:"required"`
+	Type     string `fig:"type"`
+	Required bool   `fig:"required"`
 }
 
 // NewForm returns a new Form object to the caller. It fails with an error when
