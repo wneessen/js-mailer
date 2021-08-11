@@ -19,6 +19,10 @@ type Form struct {
 		Enabled   bool   `fig:"enabled"`
 		SecretKey string `fig:"secret_key"`
 	}
+	Recaptcha struct {
+		Enabled   bool   `fig:"enabled"`
+		SecretKey string `fig:"secret_key"`
+	}
 	Content struct {
 		Subject        string
 		Fields         []string

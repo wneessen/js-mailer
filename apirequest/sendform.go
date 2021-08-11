@@ -105,6 +105,17 @@ func (a *ApiRequest) SendFormValidate(r *http.Request) (int, error) {
 		}
 	}
 
+	// Validate reCaptcha if enabled
+	if formObj.Recaptcha.Enabled {
+		recapResponse := r.Form.Get("g-recaptcha-response")
+		if recapResponse == "" {
+			return 400, fmt.Errorf("missing reCaptcha response")
+		}
+		if ok := validation.RecaptchaValidate(recapResponse, formObj.Recaptcha.SecretKey); !ok {
+			return 400, fmt.Errorf("reCaptcha challenge-response validation failed")
+		}
+	}
+
 	// Check the token
 	reqOrigin := r.Header.Get("origin")
 	if reqOrigin == "" {

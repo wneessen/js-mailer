@@ -9,16 +9,16 @@ import (
 )
 
 // HcaptchaResponseJson reflect the API response from hCaptcha
-type HcaptchaResponseJson struct {
+type RecaptchaResponseJson struct {
 	Success            bool   `json:"success"`
 	ChallengeTimestamp string `json:"challenge_ts"`
 	Hostname           string `json:"hostname"`
 }
 
-// HcaptchaValidate validates the hCaptcha challenge against the hCaptcha API
-func HcaptchaValidate(c, s string) bool {
+// RecaptchaValidate validates the reCaptcha challenge against the Google API
+func RecaptchaValidate(c, s string) bool {
 	l := log.WithFields(log.Fields{
-		"action": "validation.HcaptchaValidate",
+		"action": "validation.RecaptchaValidate",
 	})
 
 	// Create a HTTP request
@@ -26,7 +26,7 @@ func HcaptchaValidate(c, s string) bool {
 		"response": {c},
 		"secret":   {s},
 	}
-	httpResp, err := http.PostForm("https://hcaptcha.com/siteverify", postData)
+	httpResp, err := http.PostForm("https://www.google.com/recaptcha/api/siteverify", postData)
 	if err != nil {
 		l.Errorf("an error occurred creating new HTTP POST request: %v", err)
 		return false
@@ -39,12 +39,12 @@ func HcaptchaValidate(c, s string) bool {
 		return false
 	}
 	if httpResp.StatusCode == http.StatusOK {
-		var hcapResp HcaptchaResponseJson
-		if err := json.Unmarshal(respBody.Bytes(), &hcapResp); err != nil {
+		var recapResp RecaptchaResponseJson
+		if err := json.Unmarshal(respBody.Bytes(), &recapResp); err != nil {
 			l.Errorf("Failed to unmarshal response JSON: %s", err)
 			return false
 		}
-		return hcapResp.Success
+		return recapResp.Success
 	}
 
 	return false
