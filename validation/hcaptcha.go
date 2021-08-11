@@ -8,14 +8,14 @@ import (
 	"net/url"
 )
 
-// HcaptchaResponseJson reflect the API respone from hCaptcha
+// HcaptchaResponseJson reflect the API response from hCaptcha
 type HcaptchaResponseJson struct {
 	Success            bool   `json:"success"`
 	ChallengeTimestamp string `json:"challenge_ts"`
 	Hostname           string `json:"hostname"`
 }
 
-// HcaptchaValidate validates the hCaptche challange against the hCaptcha API
+// HcaptchaValidate validates the hCaptche challenge against the hCaptcha API
 func HcaptchaValidate(c, s string) bool {
 	l := log.WithFields(log.Fields{
 		"action": "validation.HcaptchaValidate",

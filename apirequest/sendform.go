@@ -101,7 +101,7 @@ func (a *ApiRequest) SendFormValidate(r *http.Request) (int, error) {
 			return 400, fmt.Errorf("missing hCaptcha response")
 		}
 		if ok := validation.HcaptchaValidate(hcapResponse, formObj.Hcaptcha.SecretKey); !ok {
-			return 400, fmt.Errorf("hCaptcha challange-response validation failed")
+			return 400, fmt.Errorf("hCaptcha challenge-response validation failed")
 		}
 	}
 

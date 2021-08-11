@@ -105,7 +105,7 @@ Again the JSON syntax of the form configuration is very simple, yet flexible.
   * `required_fields (type: []string)`: List of field names that are required to submitted
   * `honeypot (type: string)`: Name of the honeypot field, that is expected to be empty (Anti-SPAM)
 * `hcaptcha (type: struct)`: The struct for the forms hCaptcha configuration
-  * `enabled (type: bool)`: Enable hCaptcha challange-response validation
+  * `enabled (type: bool)`: Enable hCaptcha challenge-response validation
   * `secret_key (type: string)`: Your hCaptcha secret key
 * `server (type: struct)`: The struct for the forms mail server configuration
   * `host (type: string)`: Hostname of the sending mail server
