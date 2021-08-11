@@ -11,7 +11,6 @@ FROM scratch
 LABEL maintainer="wn@neessen.net"
 COPY ["docker-files/passwd", "/etc/passwd"]
 COPY ["docker-files/group", "/etc/group"]
-COPY ["", "/etc/group"]
 COPY --from=builder ["/etc/ssl/certs/ca-certificates.crt", "/etc/ssl/cert.pem"]
 COPY --chown=js-mailer ["LICENSE", "/js-mailer/LICENSE"]
 COPY --chown=js-mailer ["README.md", "/js-mailer/README.md"]
