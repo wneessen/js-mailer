@@ -10,7 +10,7 @@ import (
 
 // Form reflect the configuration struct for form configurations
 type Form struct {
-	Id         int      `fig:"id" validate:"required"`
+	Id         string   `fig:"id" validate:"required"`
 	Secret     string   `fig:"secret" validate:"required"`
 	Recipients []string `fig:"recipients" validate:"required"`
 	Sender     string   `fig:"sender" validate:"required"`
@@ -19,6 +19,7 @@ type Form struct {
 		Subject        string
 		Fields         []string
 		RequiredFields []string `fig:"required_fields"`
+		Honeypot       string   `fig:"honeypot"`
 	}
 	Server struct {
 		Host     string `fig:"host" validate:"required"`

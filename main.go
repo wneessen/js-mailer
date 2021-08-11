@@ -15,7 +15,7 @@ import (
 // VERSION is the global version string contstant
 const VERSION = "0.1.2"
 
-// serve acts as main web service server router/handler for incoming HTTP requests
+// serve acts as main web service server muxer/handler for incoming HTTP requests
 func serve(c *config.Config) {
 	l := log.WithFields(log.Fields{
 		"action": "main.serve",

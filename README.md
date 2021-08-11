@@ -69,7 +69,7 @@ Again the JSON syntax of the form configuration is very simple, yet flexible.
 
 ```json
 {
-    "id": 1,
+    "id": "test_form",
     "secret": "SuperSecretsString",
     "recipients": ["who@cares.net"],
     "sender": "website@example.com",
@@ -89,7 +89,7 @@ Again the JSON syntax of the form configuration is very simple, yet flexible.
     }
 }
 ```
-* `id (type: int)`: The id of the form (will be looked for in the `formid` parameter of the submission)
+* `id (type: string)`: The id of the form (will be looked for in the `formid` parameter of the token request)
 * `secret (type: string)`: Secret for the form. This will be used for the token generation
 * `recipients (type: []string)`: List of recipients, that should receive the mails with the submitted form data
 * `domains (type: []string)`: List of origin domains, that are allowed to use this form
@@ -110,41 +110,77 @@ Again the JSON syntax of the form configuration is very simple, yet flexible.
 `JS-Mailer` follows a two-step workflow. First your JavaScript requests a token from the API using the `/api/v1/token`
 endpoint. If the request is valid and website is authorized to request a token, the API will respond with a
 TokenResponseJson. This holds some data, which needs to be included into your form as hidden inputs. It will also
-provide a submission URL endpoint `/api/v1/send` that can be used as action in your form. Once the form is submitted,
-the API will then validate that all submitted data is correct and submit the form data to the configured recipients.
+provide a submission URL endpoint `/api/v1/send/<formid>/<token>` that can be used as action in your form. Once the form
+is submitted, the API will then validate that all submitted data is correct and submit the form data to the configured
+recipients.
 
-### API responses
-#### Token request
-The API response to a token request (`/api/v1/token`) looks like this:
+## API responses
+The API basically responds with two different types of JSON objects. A `success` response or an `error` response.
 
-```json
-{
-  "token": "0587ba3fff63ce2c54af0320b5a2d06612a0200aa139c1c150cbfae8a17084a8",
-  "create_time": 1628633657,
-  "expire_time": 1628634257,
-  "form_id": 1,
-  "url": "https://jsmailer.example.com/api/v1/send"
-}
-```
-* `token (type: string)`: The security token that needs to be part of the actual form sending request
-* `create_time (type: int64)`: The epoch timestamp when the token was created
-* `expire_time (type: int64)`: The epoch timestamp when the token will expire
-* `form_id (type: uint)`: The form id of the current form (for reference or automatic inclusion via JS)
-* `url (type: string)`: API endpoint to set your form action to
+### Success response
+The succss response JSON struct is very simple:
 
-#### Send response
-
-The API response to a send request (`/api/v1/send`) looks like this:
 ```json
 {
   "status_code": 200,
-  "success_message": "Message successfully sent",
-  "form_id": 1
+  "status": "Ok",
+  "data": {}
 }
 ```
-* `status_code (type: uint32)`: The HTTP status code
-* `success_message (type: string)`: The success message
-* `form_id (type: uint)`: The form id of the current form (for reference)
+* `status_code (type: uint32)`: The HTTP status code of the success response
+* `status (type: string)`: The HTTP status string of the success response
+* `data (type: object)`: An object with abritrary data, based on the type of response
+
+#### Successful token retrieval data object
+The `data` object of the success response for a successful token retrieval looks like this:
+
+```json
+{
+  "token": "5b19fca2b154a2681f8d6014c63b5f81bdfdd01036a64f8a835465ab5247feff",
+  "form_id": "test_form",
+  "create_time": 1628670201,
+  "expire_time": 1628670801,
+  "url": "https://jsmailer.example.com/api/v1/send/test_form/5b19fca2b154a2681f8d6014c63b5f81bdfdd01036a64f8a835465ab5247feff",
+  "enc_type": "multipart/form-data",
+  "method": "post"
+}
+```
+* `token (type: string)`: The security token of this send request
+* `form_id (type: string)`: The form id of the current form (for reference or automatic inclusion via JS)
+* `create_time (type: int64)`: The epoch timestamp when the token was created
+* `expire_time (type: int64)`: The epoch timestamp when the token will expire
+* `url (type: string)`: API endpoint to set your form action to
+* `enc_type (type: string)`: The enctype for your form
+* `method (type: string)`: The method for your form
+
+#### Sent successful data object
+The `data` object of the success response for a successfully sent message looks like this:
+
+The API response to a send request (`/api/v1/send/<formid>/<token>`) looks like this:
+```json
+{
+  "form_id": "test_form",
+  "send_time": 1628670331
+}
+```
+* `form_id (type: string)`: The form id of the current form (for reference)
+* `send_time (type: int64)`: The epoch timestamp when the message was sent
+
+### Error response
+The error response JSON struct is also very simple:
+
+```json
+{
+  "status_code": 404,
+  "status": "Not Found",
+  "error_message": "Validation failed",
+  "error_data": "Not a valid send URL"
+}
+```
+* `status_code (type: uint32)`: The HTTP status code of the success response
+* `status (type: string)`: The HTTP status string of the success response
+* `error_message (type: string)`: The general error message why this request failed
+* `error_data (type: interface{})`: Optional details in addtion to the error message (i. e. missing fields)
 
 ## Example implementation
 

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 )
 
+// Config represents the global config object struct
 type Config struct {
 	Loglevel string `fig:"loglevel" default:"debug"`
 	Api      struct {
@@ -20,6 +21,8 @@ type Config struct {
 	}
 }
 
+// NewConfig returns a new Config object and fails if the configuration was not found or
+// has bad syntax
 func NewConfig() Config {
 	l := log.WithFields(log.Fields{
 		"action": "config.NewConfig",

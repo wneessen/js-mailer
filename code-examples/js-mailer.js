@@ -31,19 +31,9 @@ function jsMailerGetToken() {
             return response.json()
         }).then(respJson => {
             if(respJson !== null) {
-                formElem.action = respJson.url
-                formElem.method = 'post'
-                formElem.enctype = 'multipart/form-data'
-                let formIdInput = document.createElement("input")
-                formIdInput.value = respJson.form_id
-                formIdInput.name = 'formid'
-                formIdInput.type = 'hidden'
-                let tokenInput = document.createElement("input")
-                tokenInput.value = respJson.token
-                tokenInput.name = 'token'
-                tokenInput.type = 'hidden'
-                formElem.appendChild(formIdInput)
-                formElem.appendChild(tokenInput)
+                formElem.action = respJson.data.url
+                formElem.method = respJson.data.method
+                formElem.enctype = respJson.data.enc_type
             }
         }).catch(() => {
             let submitBtn = formElem.querySelector('#submitButton')
