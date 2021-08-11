@@ -7,6 +7,7 @@ import (
 	"github.com/go-mail/mail"
 	log "github.com/sirupsen/logrus"
 	"github.com/wneessen/js-mailer/response"
+	"github.com/wneessen/js-mailer/validation"
 	"net/http"
 	"strings"
 	"time"
@@ -23,7 +24,7 @@ type SentSuccessfullJson struct {
 func (a *ApiRequest) SendFormParse(r *http.Request) (int, error) {
 	urlParts := strings.SplitN(r.URL.String(), "/", 6)
 	if len(urlParts) != 6 {
-		return 404, fmt.Errorf("Invalid URL")
+		return 404, fmt.Errorf("invalid URL")
 	}
 	a.FormId = urlParts[4]
 	a.Token = urlParts[5]
@@ -46,17 +47,17 @@ func (a *ApiRequest) SendFormValidate(r *http.Request) (int, error) {
 	var tokenRespObj TokenResponseJson
 	cacheObj, err := a.Cache.Get(a.Token)
 	if err == ttlcache.ErrNotFound {
-		return 404, fmt.Errorf("Not a valid send URL")
+		return 404, fmt.Errorf("not a valid send URL")
 	}
 	if err != nil && err != ttlcache.ErrNotFound {
-		return 500, fmt.Errorf("Failed to look up token in cache: %s", err)
+		return 500, fmt.Errorf("failed to look up token in cache: %s", err)
 	}
 	if cacheObj != nil {
 		tokenRespObj = cacheObj.(TokenResponseJson)
 	}
 	if tokenRespObj.FormId != a.FormId {
 		l.Warn("URL form id does not match the cached form object id")
-		return 400, fmt.Errorf("Invalid form id")
+		return 400, fmt.Errorf("invalid form id")
 	}
 	defer func() {
 		if err := a.Cache.Remove(a.Token); err != nil {
@@ -68,13 +69,13 @@ func (a *ApiRequest) SendFormValidate(r *http.Request) (int, error) {
 	formObj, err := a.GetForm(a.FormId)
 	if err != nil {
 		l.Errorf("Failed get formObj: %s", err)
-		return 500, fmt.Errorf("Form lookup failed")
+		return 500, fmt.Errorf("form lookup failed")
 	}
 	a.FormObj = &formObj
 
 	// Make sure all required fields are set
 	// Maybe we can build some kind of validator here
-	missingFields := []string{}
+	var missingFields []string
 	for _, f := range formObj.Content.RequiredFields {
 		if r.Form.Get(f) == "" {
 			l.Warnf("Form includes a honeypot field which is not empty. Denying request")
@@ -83,13 +84,24 @@ func (a *ApiRequest) SendFormValidate(r *http.Request) (int, error) {
 	}
 	if len(missingFields) > 0 {
 		l.Errorf("Required fields missing: %s", strings.Join(missingFields, ", "))
-		return 400, fmt.Errorf("Required fields missing: %s", strings.Join(missingFields, ", "))
+		return 400, fmt.Errorf("required fields missing: %s", strings.Join(missingFields, ", "))
 	}
 
 	// Anti-SPAM honeypot handling
 	if formObj.Content.Honeypot != nil {
 		if r.Form.Get(*formObj.Content.Honeypot) != "" {
-			return 400, fmt.Errorf("Invalid form data")
+			return 400, fmt.Errorf("invalid form data")
+		}
+	}
+
+	// Validate hCaptcha if enabled
+	if formObj.Hcaptcha.Enabled {
+		hcapResponse := r.Form.Get("h-captcha-response")
+		if hcapResponse == "" {
+			return 400, fmt.Errorf("missing hCaptcha response")
+		}
+		if ok := validation.HcaptchaValidate(hcapResponse, formObj.Hcaptcha.SecretKey); !ok {
+			return 400, fmt.Errorf("hCaptcha challange-response validation failed")
 		}
 	}
 
@@ -97,14 +109,14 @@ func (a *ApiRequest) SendFormValidate(r *http.Request) (int, error) {
 	reqOrigin := r.Header.Get("origin")
 	if reqOrigin == "" {
 		l.Errorf("No origin domain set in HTTP request")
-		return 401, fmt.Errorf("Domain not allowed to access form")
+		return 401, fmt.Errorf("domain not allowed to access form")
 	}
 	tokenText := fmt.Sprintf("%s_%d_%d_%s_%s", reqOrigin, tokenRespObj.CreateTime, tokenRespObj.ExpireTime,
 		formObj.Id, formObj.Secret)
 	tokenSha := fmt.Sprintf("%x", sha256.Sum256([]byte(tokenText)))
 	if tokenSha != a.Token {
 		l.Errorf("No origin domain set in HTTP request")
-		return 401, fmt.Errorf("Domain not allowed to access form")
+		return 401, fmt.Errorf("domain not allowed to access form")
 	}
 
 	return 0, nil

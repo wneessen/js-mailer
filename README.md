@@ -15,11 +15,12 @@ simple API that can be accessed via JavaScript `Fetch()` or `XMLHttpRequest`.
 * Anti-SPAM functionality via honeypot fields
 * Limit form access to specific domains
 * Per-form mail server configuration
+* hCaptcha support
 
 ### Planed features
 * [ ] Form field-type validation
 * [ ] Form body templates (possibly HTML)
-* [ ] hCaptcha/gCaptcha support
+* [ ] gCaptcha support
 
 ## Installation
 
@@ -80,6 +81,10 @@ Again the JSON syntax of the form configuration is very simple, yet flexible.
         "required_fields": ["name", "email"],
         "honeypot": "street"
     },
+    "hcaptcha": {
+      "enabled": true,
+      "secret_key": "0x01234567890"
+    },
     "server": {
         "host": "mail.example.com",
         "port": 25,
@@ -99,6 +104,9 @@ Again the JSON syntax of the form configuration is very simple, yet flexible.
   * `fields (type: []string)`: List of field names that should show up in the mail notification
   * `required_fields (type: []string)`: List of field names that are required to submitted
   * `honeypot (type: string)`: Name of the honeypot field, that is expected to be empty (Anti-SPAM)
+* `hcaptcha (type: struct)`: The struct for the forms hCaptcha configuration
+  * `enabled (type: bool)`: Enable hCaptcha challange-response validation
+  * `secret_key (type: string)`: Your hCaptcha secret key
 * `server (type: struct)`: The struct for the forms mail server configuration
   * `host (type: string)`: Hostname of the sending mail server
   * `port (type: uint32)`: Port to connect to on the sending mail server
