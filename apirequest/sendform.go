@@ -65,7 +65,7 @@ func (a *ApiRequest) SendFormValidate(r *http.Request) (int, error) {
 	}()
 
 	// Let's try to read formobj from cache
-	formObj, err := a.GetForm(fmt.Sprintf("%s", a.FormId))
+	formObj, err := a.GetForm(a.FormId)
 	if err != nil {
 		l.Errorf("Failed get formObj: %s", err)
 		return 500, fmt.Errorf("Form lookup failed")
