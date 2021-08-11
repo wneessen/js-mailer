@@ -62,7 +62,7 @@ func (a *ApiRequest) GetToken(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if !isValid {
-		l.Errorf("Domain %q not in allowed domains list for form %d", reqOrigin, formObj.Id)
+		l.Errorf("Domain %q not in allowed domains list for form %s", reqOrigin, formObj.Id)
 		response.ErrorJson(w, 401, "Domain is not allowed to access the requested form")
 		return
 	}
@@ -71,7 +71,7 @@ func (a *ApiRequest) GetToken(w http.ResponseWriter, r *http.Request) {
 	// Generate the token
 	nowTime := time.Now()
 	expTime := time.Now().Add(time.Minute * 10)
-	tokenText := fmt.Sprintf("%s_%d_%d_%d_%s", reqOrigin, nowTime.Unix(), expTime.Unix(), formObj.Id, formObj.Secret)
+	tokenText := fmt.Sprintf("%s_%d_%d_%s_%s", reqOrigin, nowTime.Unix(), expTime.Unix(), formObj.Id, formObj.Secret)
 	tokenSha := fmt.Sprintf("%x", sha256.Sum256([]byte(tokenText)))
 	respToken := TokenResponseJson{
 		Token:      tokenSha,

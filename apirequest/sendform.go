@@ -65,7 +65,7 @@ func (a *ApiRequest) SendFormValidate(r *http.Request) (int, error) {
 	}()
 
 	// Let's try to read formobj from cache
-	formObj, err := a.GetForm(fmt.Sprintf("%d", a.FormId))
+	formObj, err := a.GetForm(fmt.Sprintf("%s", a.FormId))
 	if err != nil {
 		l.Errorf("Failed get formObj: %s", err)
 		return 500, fmt.Errorf("Form lookup failed")
@@ -91,7 +91,7 @@ func (a *ApiRequest) SendFormValidate(r *http.Request) (int, error) {
 		l.Errorf("No origin domain set in HTTP request")
 		return 401, fmt.Errorf("Domain not allowed to access form")
 	}
-	tokenText := fmt.Sprintf("%s_%d_%d_%d_%s", reqOrigin, tokenRespObj.CreateTime, tokenRespObj.ExpireTime,
+	tokenText := fmt.Sprintf("%s_%d_%d_%s_%s", reqOrigin, tokenRespObj.CreateTime, tokenRespObj.ExpireTime,
 		formObj.Id, formObj.Secret)
 	tokenSha := fmt.Sprintf("%x", sha256.Sum256([]byte(tokenText)))
 	if tokenSha != a.Token {
