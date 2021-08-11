@@ -15,7 +15,11 @@ type Form struct {
 	Recipients []string `fig:"recipients" validate:"required"`
 	Sender     string   `fig:"sender" validate:"required"`
 	Domains    []string `fig:"domains" validate:"required"`
-	Content    struct {
+	Hcaptcha   struct {
+		Enabled   bool   `fig:"enabled"`
+		SecretKey string `fig:"secret_key"`
+	}
+	Content struct {
 		Subject        string
 		Fields         []string
 		RequiredFields []string `fig:"required_fields"`
