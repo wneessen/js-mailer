@@ -2,6 +2,7 @@ package form
 
 import (
 	"fmt"
+	"github.com/cyphar/filepath-securejoin"
 	"github.com/kkyr/fig"
 	log "github.com/sirupsen/logrus"
 	"github.com/wneessen/js-mailer/config"
@@ -54,10 +55,15 @@ func NewForm(c *config.Config, i string) (Form, error) {
 	l := log.WithFields(log.Fields{
 		"action": "form.NewForm",
 	})
-	_, err := os.Stat(fmt.Sprintf("%s/%s.json", c.Forms.Path, i))
+	formPath, err := securejoin.SecureJoin(c.Forms.Path, fmt.Sprintf("%s.json", i))
+	if err != nil {
+		l.Errorf("Failed to securely join forms path and form id")
+		return Form{}, fmt.Errorf("not a valid form id")
+	}
+	_, err = os.Stat(formPath)
 	if err != nil {
 		l.Errorf("Failed to stat form config: %s", err)
-		return Form{}, fmt.Errorf("Not a valid form id")
+		return Form{}, fmt.Errorf("not a valid form id")
 	}
 	var formObj Form
 	if err := fig.Load(&formObj, fig.File(fmt.Sprintf("%s.json", i)),

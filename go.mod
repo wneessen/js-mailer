@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	github.com/ReneKroon/ttlcache/v2 v2.7.0
+	github.com/cyphar/filepath-securejoin v0.2.3
 	github.com/go-mail/mail v2.3.1+incompatible
 	github.com/kkyr/fig v0.2.0
 	github.com/sirupsen/logrus v1.8.1
