@@ -3,27 +3,26 @@ package response
 import (
 	"encoding/json"
 	log "github.com/sirupsen/logrus"
-	"github.com/wneessen/js-mailer/form"
 	"net/http"
 )
 
 // SuccessResponseJson reflects the HTTP response JSON for a successful request
 type SuccessResponseJson struct {
-	StatusCode     int    `json:"status_code"`
-	SuccessMessage string `json:"success_message"`
-	FormId         int    `json:"form_id"`
+	StatusCode int         `json:"status_code"`
+	Status     string      `json:"status"`
+	Data       interface{} `json:"data"`
 }
 
 // SuccessJson writes a SuccessResponseJson struct to the http.ResponseWriter
-func SuccessJson(w http.ResponseWriter, c int, f *form.Form) {
+func SuccessJson(w http.ResponseWriter, c int, d interface{}) {
 	l := log.WithFields(log.Fields{
 		"action": "http_error.ErrorJson",
 	})
 	l.Debug("Request successfully completed")
 	successMsg := SuccessResponseJson{
-		StatusCode:     c,
-		SuccessMessage: "Message successfully sent",
-		FormId:         f.Id,
+		StatusCode: c,
+		Status:     HttpStatusMsg[c],
+		Data:       d,
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(c)

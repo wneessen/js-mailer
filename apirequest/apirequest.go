@@ -4,8 +4,10 @@ import (
 	"github.com/ReneKroon/ttlcache/v2"
 	log "github.com/sirupsen/logrus"
 	"github.com/wneessen/js-mailer/config"
+	"github.com/wneessen/js-mailer/form"
 	"github.com/wneessen/js-mailer/response"
 	"net/http"
+	"strings"
 )
 
 // ApiRequest reflects a new Api request object
@@ -14,6 +16,9 @@ type ApiRequest struct {
 	Config  *config.Config
 	IsHttps bool
 	Scheme  string
+	FormId  string
+	Token   string
+	FormObj *form.Form
 }
 
 // RequestHandler handles an incoming HTTP request on the API routes and
@@ -41,14 +46,25 @@ func (a *ApiRequest) RequestHandler(w http.ResponseWriter, r *http.Request) {
 	// Set general response header
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	switch r.URL.String() {
-	case "/api/v1/token":
+	switch {
+	case r.URL.String() == "/api/v1/token":
 		a.GetToken(w, r)
 		return
-	case "/api/v1/send":
+	case strings.HasPrefix(r.URL.String(), "/api/v1/send/"):
+		code, err := a.SendFormParse(r)
+		if err != nil {
+			l.Errorf("Failed to parse send request: %s", err)
+			response.ErrorJsonData(w, code, "Failed parsing send request", err.Error())
+			return
+		}
+		code, err = a.SendFormValidate(r)
+		if err != nil {
+			response.ErrorJsonData(w, code, "Validation failed", err.Error())
+			return
+		}
 		a.SendForm(w, r)
 		return
 	default:
-		response.ErrorJson(w, 404, "Not found")
+		response.ErrorJson(w, 404, "Unknown API route")
 	}
 }

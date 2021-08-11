@@ -21,7 +21,7 @@ func (a *ApiRequest) GetForm(i string) (form.Form, error) {
 		if err != nil {
 			return formObj, err
 		}
-		if err := a.Cache.Set(fmt.Sprintf("formObj_%d", formObj.Id), formObj); err != nil {
+		if err := a.Cache.Set(fmt.Sprintf("formObj_%s", formObj.Id), formObj); err != nil {
 			return formObj, err
 		}
 	}
