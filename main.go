@@ -33,7 +33,7 @@ func serve(c *config.Config) {
 		}
 	}()
 
-	// Initalize the Api request object
+	// Initialize the Api request object
 	apiReq := &apirequest.ApiRequest{
 		Cache:  cacheObj,
 		Config: c,

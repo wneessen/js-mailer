@@ -12,11 +12,11 @@ simple API that can be accessed via JavaScript `Fetch()` or `XMLHttpRequest`.
 * Only display form-fields that are configured in for the form in the resulting mail
 * Check for required form fields
 * Anti-SPAM functionality via built-in, auto-expiring and single-use security token feature
+* Anti-SPAM functionality via honeypot fields
 * Limit form access to specific domains
 * Per-form mail server configuration
 
 ### Planed features
-* [ ] Anti-SPAM functionality via honeypot fields
 * [ ] Form field-type validation
 * [ ] Form body templates (possibly HTML)
 * [ ] hCaptcha/gCaptcha support
@@ -77,7 +77,8 @@ Again the JSON syntax of the form configuration is very simple, yet flexible.
     "content": {
         "subject": "New message through the www.example.com contact form",
         "fields": ["name", "email", "message"],
-        "required_fields": ["name", "email"]
+        "required_fields": ["name", "email"],
+        "honeypot": "street"
     },
     "server": {
         "host": "mail.example.com",
@@ -97,6 +98,7 @@ Again the JSON syntax of the form configuration is very simple, yet flexible.
   * `subject (type: string)`: Subject for the mail notification of the form submission
   * `fields (type: []string)`: List of field names that should show up in the mail notification
   * `required_fields (type: []string)`: List of field names that are required to submitted
+  * `honeypot (type: string)`: Name of the honeypot field, that is expected to be empty (Anti-SPAM)
 * `server (type: struct)`: The struct for the forms mail server configuration
   * `host (type: string)`: Hostname of the sending mail server
   * `port (type: uint32)`: Port to connect to on the sending mail server

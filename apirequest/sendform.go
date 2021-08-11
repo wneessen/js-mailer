@@ -35,7 +35,7 @@ func (a *ApiRequest) SendFormParse(r *http.Request) (int, error) {
 	return 0, nil
 }
 
-// SendFormValidate validates that all requirement are fullfilled and returns an error
+// SendFormValidate validates that all requirement are fulfilled and returns an error
 // if the validation failed
 func (a *ApiRequest) SendFormValidate(r *http.Request) (int, error) {
 	l := log.WithFields(log.Fields{
@@ -77,12 +77,20 @@ func (a *ApiRequest) SendFormValidate(r *http.Request) (int, error) {
 	missingFields := []string{}
 	for _, f := range formObj.Content.RequiredFields {
 		if r.Form.Get(f) == "" {
+			l.Warnf("Form includes a honeypot field which is not empty. Denying request")
 			missingFields = append(missingFields, f)
 		}
 	}
 	if len(missingFields) > 0 {
 		l.Errorf("Required fields missing: %s", strings.Join(missingFields, ", "))
 		return 400, fmt.Errorf("Required fields missing: %s", strings.Join(missingFields, ", "))
+	}
+
+	// Anti-SPAM honeypot handling
+	if formObj.Content.Honeypot != nil {
+		if r.Form.Get(*formObj.Content.Honeypot) != "" {
+			return 400, fmt.Errorf("Invalid form data")
+		}
 	}
 
 	// Check the token

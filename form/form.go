@@ -19,7 +19,7 @@ type Form struct {
 		Subject        string
 		Fields         []string
 		RequiredFields []string `fig:"required_fields"`
-		Honeypot       string   `fig:"honeypot"`
+		Honeypot       *string  `fig:"honeypot"`
 	}
 	Server struct {
 		Host     string `fig:"host" validate:"required"`
@@ -32,7 +32,7 @@ type Form struct {
 }
 
 // NewForm returns a new Form object to the caller. It fails with an error when
-// the form is question wasn't found or does not fullfill the syntax requirements
+// the form is question wasn't found or does not fulfill the syntax requirements
 func NewForm(c *config.Config, i string) (Form, error) {
 	l := log.WithFields(log.Fields{
 		"action": "form.NewForm",
