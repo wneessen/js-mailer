@@ -12,6 +12,7 @@ import (
 	"time"
 )
 
+// SendForm handles a send Api request
 func (a *ApiRequest) SendForm(w http.ResponseWriter, r *http.Request) {
 	l := log.WithFields(log.Fields{
 		"action": "apiRequest.SendForm",

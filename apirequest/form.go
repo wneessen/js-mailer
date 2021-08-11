@@ -6,6 +6,8 @@ import (
 	"github.com/wneessen/js-mailer/form"
 )
 
+// GetForm gets a form.Form object either from the in-memory cache or if not cached
+// yet, from the file system
 func (a *ApiRequest) GetForm(i string) (form.Form, error) {
 	var formObj form.Form
 	cacheForm, err := a.Cache.Get(fmt.Sprintf("formObj_%s", i))

@@ -8,6 +8,7 @@ import (
 	"os"
 )
 
+// Form reflect the configuration struct for form configurations
 type Form struct {
 	Id         int      `fig:"id" validate:"required"`
 	Secret     string   `fig:"secret" validate:"required"`
@@ -29,6 +30,8 @@ type Form struct {
 	}
 }
 
+// NewForm returns a new Form object to the caller. It fails with an error when
+// the form is question wasn't found or does not fullfill the syntax requirements
 func NewForm(c *config.Config, i string) (Form, error) {
 	l := log.WithFields(log.Fields{
 		"action": "form.NewForm",

@@ -10,7 +10,7 @@
 </head>
 <body>
 <div class="container px-1 my-3">
-    <div class="alert alert-danger alert-dismissible fade show" role="alert" id="errorMsg" style="display: block;">
+    <div class="alert alert-danger alert-dismissible fade show" role="alert" id="errorMsg">
         This site is not authorized to send mails via js-mailer
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
@@ -28,7 +28,7 @@
         <div class="mb-3">
             <label class="form-label" for="messageField">Your message for us:<span
                   class="text-primary font-weight-bold">*</span></label>
-            <textarea class="form-control" id="messageField" name="message" required="required" type="text"
+            <textarea class="form-control" id="messageField" name="message" required="required"
                       placeholder="Your message for us" style="height:12rem"></textarea>
         </div>
         <div class="form-check">
@@ -40,7 +40,7 @@
         </div>
         <br>
         <div class="d-grid">
-            <button class="btn btn-lg btn-secondary" id="submitButton" type="submit" disabled="" style="display: none;">
+            <button class="btn btn-lg btn-primary" id="submitButton" type="submit" disabled="">
                 Submit message
             </button>
         </div>

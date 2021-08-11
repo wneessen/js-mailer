@@ -16,10 +16,10 @@ simple API that can be accessed via JavaScript `Fetch()` or `XMLHttpRequest`.
 * Per-form mail server configuration
 
 ### Planed features
-* Anti-SPAM functionality via honeypot fields
-* Form field-type validation
-* Form body templates (possibly HTML)
-* hCaptcha/gCaptcha support
+* [ ] Anti-SPAM functionality via honeypot fields
+* [ ] Form field-type validation
+* [ ] Form body templates (possibly HTML)
+* [ ] hCaptcha/gCaptcha support
 
 ## Installation
 

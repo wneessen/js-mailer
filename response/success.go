@@ -7,12 +7,14 @@ import (
 	"net/http"
 )
 
+// SuccessResponseJson reflects the HTTP response JSON for a successful request
 type SuccessResponseJson struct {
 	StatusCode     int    `json:"status_code"`
 	SuccessMessage string `json:"success_message"`
-	FormId         int
+	FormId         int    `json:"form_id"`
 }
 
+// SuccessJson writes a SuccessResponseJson struct to the http.ResponseWriter
 func SuccessJson(w http.ResponseWriter, c int, f *form.Form) {
 	l := log.WithFields(log.Fields{
 		"action": "http_error.ErrorJson",

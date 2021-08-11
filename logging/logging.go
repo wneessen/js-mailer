@@ -5,7 +5,8 @@ import (
 	"strings"
 )
 
-func SetLogging() {
+// InitLogging initializes the logging object and sets some sane defaults
+func InitLogging() {
 	log.SetLevel(log.InfoLevel)
 	log.SetFormatter(&log.TextFormatter{
 		DisableLevelTruncation: true,
@@ -15,6 +16,7 @@ func SetLogging() {
 	})
 }
 
+// SetLogLevel sets the correspoding log level for the global logging object
 func SetLogLevel(l string) {
 	if l == "" {
 		return
