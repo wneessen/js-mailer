@@ -10,6 +10,7 @@ import (
 	"time"
 )
 
+// TokenResponseJson reflects the JSON response struct for token request
 type TokenResponseJson struct {
 	Token      string `json:"token"`
 	CreateTime int64  `json:"create_time,omitempty"`
@@ -18,6 +19,8 @@ type TokenResponseJson struct {
 	Url        string `json:"url"`
 }
 
+// GetToken handles the HTTP token requests and return a TokenResponseJson on success or
+// an response.ErrorResponseJson on failure
 func (a *ApiRequest) GetToken(w http.ResponseWriter, r *http.Request) {
 	l := log.WithFields(log.Fields{
 		"action": "apiRequest.GetToken",

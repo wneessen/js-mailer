@@ -12,16 +12,10 @@ import (
 	"time"
 )
 
-const VERSION = "0.1.1"
+// VERSION is the global version string contstant
+const VERSION = "0.1.2"
 
-func main() {
-	// Initialize everything
-	logging.SetLogging()
-	confObj := config.NewConfig()
-	logging.SetLogLevel(confObj.Loglevel)
-	serve(&confObj)
-}
-
+// serve acts as main web service server router/handler for incoming HTTP requests
 func serve(c *config.Config) {
 	l := log.WithFields(log.Fields{
 		"action": "main.serve",
@@ -58,4 +52,12 @@ func serve(c *config.Config) {
 		l.Errorf("Failed to start server: %s", err)
 		os.Exit(1)
 	}
+}
+
+// main is the main function
+func main() {
+	logging.InitLogging()
+	confObj := config.NewConfig()
+	logging.SetLogLevel(confObj.Loglevel)
+	serve(&confObj)
 }

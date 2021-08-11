@@ -6,17 +6,22 @@ import (
 	"net/http"
 )
 
+// ErrorResponseJson reflects the JSON response for a failed request
 type ErrorResponseJson struct {
 	StatusCode   int    `json:"status_code"`
 	ErrorMessage string `json:"error_message"`
 }
 
+// MissingFieldsResponseJson reflects the JSON response for a failed request due to
+// missing fields in the send request
 type MissingFieldsResponseJson struct {
 	StatusCode    int      `json:"status_code"`
 	ErrorMessage  string   `json:"error_message"`
 	MissingFields []string `json:"missing_fields"`
 }
 
+// ErrorJson writes a ErrorResponseJson to the http.ResponseWriter in case
+// an error response is needed as result to the HTTP request
 func ErrorJson(w http.ResponseWriter, c int, m string) {
 	l := log.WithFields(log.Fields{
 		"action": "http_error.ErrorJson",
@@ -30,6 +35,8 @@ func ErrorJson(w http.ResponseWriter, c int, m string) {
 	}
 }
 
+// MissingFieldsJson writes a MissingFieldsResponseJson to the http.ResponseWriter when
+// a send request is missing required fields
 func MissingFieldsJson(w http.ResponseWriter, c int, m string, f []string) {
 	l := log.WithFields(log.Fields{
 		"action": "http_error.MissingFieldsJson",

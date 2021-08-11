@@ -8,6 +8,7 @@ import (
 	"net/http"
 )
 
+// ApiRequest reflects a new Api request object
 type ApiRequest struct {
 	Cache   *ttlcache.Cache
 	Config  *config.Config
@@ -15,6 +16,8 @@ type ApiRequest struct {
 	Scheme  string
 }
 
+// RequestHandler handles an incoming HTTP request on the API routes and
+// routes them accordingly to its request type
 func (a *ApiRequest) RequestHandler(w http.ResponseWriter, r *http.Request) {
 	l := log.WithFields(log.Fields{
 		"action": "apiRequest.RequestHandler",
