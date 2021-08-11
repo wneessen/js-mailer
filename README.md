@@ -18,10 +18,10 @@ API that can be accessed via JavaScript `Fetch()` or `XMLHttpRequest`.
 * Per-form mail server configuration
 * hCaptcha support
 * reCaptcha v2 support
+* Form field type validation (text, email, number, bool)
 
 ### Planed features
 
-* [ ] Form field-type validation
 * [ ] Form body templates (possibly HTML)
 
 ## Installation
@@ -90,20 +90,34 @@ the JSON syntax of the form configuration is very simple, yet flexible.
             "name",
             "email",
             "message"
-        ],
-        "required_fields": [
-            "name",
-            "email"
-        ],
-        "honeypot": "street"
+        ]
     },
-    "hcaptcha": {
-        "enabled": true,
-        "secret_key": "0x01234567890"
-    },
-    "recaptcha": {
-        "enabled": true,
-        "secret_key": "0x01234567890"
+    "validation": {
+        "hcaptcha": {
+            "enabled": true,
+            "secret_key": "0x01234567890"
+        },
+        "recaptcha": {
+            "enabled": true,
+            "secret_key": "0x01234567890"
+        },
+        "honeypot": "street",
+        "fields": [
+            {
+                "name": "name",
+                "type": "text",
+                "required": true
+            },
+            {
+                "name": "mail_addr",
+                "type": "email",
+                "required": true
+            },
+            {
+                "name": "terms_checked",
+                "required": true
+            }
+        ]
     },
     "server": {
         "host": "mail.example.com",
@@ -123,14 +137,18 @@ the JSON syntax of the form configuration is very simple, yet flexible.
 * `content (type: struct)`: The struct for the mail content configuration
     * `subject (type: string)`: Subject for the mail notification of the form submission
     * `fields (type: []string)`: List of field names that should show up in the mail notification
-    * `required_fields (type: []string)`: List of field names that are required to submitted
-    * `honeypot (type: string)`: Name of the honeypot field, that is expected to be empty (Anti-SPAM)
-* `hcaptcha (type: struct)`: The struct for the forms hCaptcha configuration
-    * `enabled (type: bool)`: Enable hCaptcha challenge-response validation
-    * `secret_key (type: string)`: Your hCaptcha secret key
-* `recaptcha (type: struct)`: The struct for the forms reCaptcha configuration
-  * `enabled (type: bool)`: Enable reCaptcha challenge-response validation
-  * `secret_key (type: string)`: Your reCaptcha secret key
+* `validation (type: struct)`: The struct for the form validation configuration
+  * `hcaptcha (type: struct)`: The struct for the forms hCaptcha configuration
+      * `enabled (type: bool)`: Enable hCaptcha challenge-response validation
+      * `secret_key (type: string)`: Your hCaptcha secret key
+  * `recaptcha (type: struct)`: The struct for the forms reCaptcha configuration
+      * `enabled (type: bool)`: Enable reCaptcha challenge-response validation
+      * `secret_key (type: string)`: Your reCaptcha secret key
+  * `honeypot (type: string)`: Name of the honeypot field, that is expected to be empty (Anti-SPAM)
+  * `fields (type: []struct)`: Array of single field validation configurations
+    * `name (type: string)`: Field validation identifier
+    * `type (type: string)`: Type of validation to run on field (text, email, nummber, bool)
+    * `required (type: boolean)`: If set to true, the field is required
 * `server (type: struct)`: The struct for the forms mail server configuration
     * `host (type: string)`: Hostname of the sending mail server
     * `port (type: uint32)`: Port to connect to on the sending mail server

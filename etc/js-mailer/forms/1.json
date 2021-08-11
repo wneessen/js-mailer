@@ -1,13 +1,53 @@
 {
-    "id": 1,
+    "id": "test_form",
     "secret": "SuperSecretsString",
-    "recipients": ["who@cares.net"],
+    "recipients": [
+        "who@cares.net"
+    ],
     "sender": "website@example.com",
-    "domains": ["www.example.com", "example.com"],
+    "domains": [
+        "www.example.com",
+        "example.com"
+    ],
+    "validation": {
+        "hcaptcha": {
+            "enabled": false,
+            "secret_key": "0x1234567890"
+        },
+        "recaptcha": {
+            "enabled": false,
+            "secret_key": "0x1234567890"
+        },
+        "fields": [
+            {
+                "name": "name",
+                "type": "text",
+                "required": true
+            },
+            {
+                "name": "email",
+                "type": "email",
+                "required": true
+            },
+            {
+                "name": "age",
+                "type": "number",
+                "required": true
+            },
+            {
+                "name": "message",
+                "required": true
+            }
+        ]
+    },
     "content": {
         "subject": "New message through the www.example.com contact form",
-        "fields": ["name", "email", "message"],
-        "required_fields": ["name", "email"]
+        "fields": [
+            "name",
+            "email",
+            "age",
+            "message"
+        ]
     },
     "server": {
         "host": "mail.example.com",
