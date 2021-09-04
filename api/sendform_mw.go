@@ -221,7 +221,7 @@ func (r *Route) SendFormHcaptcha(next echo.HandlerFunc) echo.HandlerFunc {
 			if httpResp.StatusCode == http.StatusOK {
 				var hcapResp HcaptchaResponse
 				if err := json.Unmarshal(respBody.Bytes(), &hcapResp); err != nil {
-					c.Logger().Errorf("HTTP repsonse JSON unmarshalling failed: %s", err)
+					c.Logger().Errorf("HTTP response JSON unmarshalling failed: %s", err)
 					return echo.NewHTTPError(http.StatusInternalServerError, "hCaptcha validation failed")
 				}
 				if !hcapResp.Success {
@@ -273,7 +273,7 @@ func (r *Route) SendFormRecaptcha(next echo.HandlerFunc) echo.HandlerFunc {
 			if httpResp.StatusCode == http.StatusOK {
 				var recapResp ReCaptchaResponse
 				if err := json.Unmarshal(respBody.Bytes(), &recapResp); err != nil {
-					c.Logger().Errorf("HTTP repsonse JSON unmarshalling failed: %s", err)
+					c.Logger().Errorf("HTTP response JSON unmarshalling failed: %s", err)
 					return echo.NewHTTPError(http.StatusInternalServerError, "reCaptcha validation failed")
 				}
 				if !recapResp.Success {

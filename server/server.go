@@ -17,7 +17,7 @@ import (
 )
 
 // VERSION is the global version string contstant
-const VERSION = "0.2.0"
+const VERSION = "0.2.1"
 
 // Srv represents the server object
 type Srv struct {
@@ -26,7 +26,7 @@ type Srv struct {
 	Echo   *echo.Echo
 }
 
-// Start initalizes and starts the web service
+// Start initializes and starts the web service
 func (s *Srv) Start() {
 	s.Echo = echo.New()
 
