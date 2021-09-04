@@ -47,24 +47,26 @@ and comes with sane defaults.
 
 ```json
 {
-    "api": {
-        "bind_addr": "0.0.0.0",
-        "port": 8765
-    },
-    "forms": {
-        "path": "/etc/js-mailer/forms",
-        "maxlength": 1024000
-    },
-    "loglevel": "debug"
+  "forms": {
+    "path": "/etc/js-mailer/forms",
+    "maxlength": "10M"
+  },
+  "loglevel": "debug",
+  "server": {
+    "bind_addr": "0.0.0.0",
+    "port": 8765,
+    "timeout": "15s"
+  }
 }
 ```
 
-* `api (type: struct)`: The struct for the web api configuration
+* `server (type: struct)`: The struct for the web api configuration
     * `bind_addr (type: string)`: The IP address to bind the web service to
     * `port (type: uint)`: The port for the webservice to listen on
+    * `timeout (type: time.Duration)`: The duration a request can take at max.
 * `forms (type: struct)`: The struct for the forms configuration
     * `path (type: string)`: The path in which `js-mailer` will look for form configuration JSON files
-    * `maxlength (type: int64)`: Maximum length in bytes of memory that will be read from the form data HTTP header
+    * `maxlength (type: string)`: Maximum size of the request body (default: "10M")
 * `loglevel (type: string)`: The log level for the web service
 
 ### Form configuration
@@ -74,59 +76,61 @@ the JSON syntax of the form configuration is very simple, yet flexible.
 
 ```json
 {
-    "id": "test_form",
-    "secret": "SuperSecretsString",
-    "recipients": [
-        "who@cares.net"
-    ],
-    "sender": "website@example.com",
-    "domains": [
-        "www.example.com",
-        "example.com"
-    ],
-    "content": {
-        "subject": "New message through the www.example.com contact form",
-        "fields": [
-            "name",
-            "email",
-            "message"
-        ]
+  "id": "test_form",
+  "secret": "SuperSecretsString",
+  "recipients": [
+    "who@cares.net"
+  ],
+  "sender": "website@example.com",
+  "domains": [
+    "www.example.com",
+    "example.com"
+  ],
+  "content": {
+    "subject": "New message through the www.example.com contact form",
+    "fields": [
+      "name",
+      "email",
+      "message"
+    ]
+  },
+  "validation": {
+    "hcaptcha": {
+      "enabled": true,
+      "secret_key": "0x01234567890"
     },
-    "validation": {
-        "hcaptcha": {
-            "enabled": true,
-            "secret_key": "0x01234567890"
-        },
-        "recaptcha": {
-            "enabled": true,
-            "secret_key": "0x01234567890"
-        },
-        "honeypot": "street",
-        "fields": [
-            {
-                "name": "name",
-                "type": "text",
-                "required": true
-            },
-            {
-                "name": "mail_addr",
-                "type": "email",
-                "required": true
-            },
-            {
-                "name": "terms_checked",
-                "required": true
-            }
-        ]
+    "recaptcha": {
+      "enabled": true,
+      "secret_key": "0x01234567890"
     },
-    "server": {
-        "host": "mail.example.com",
-        "port": 25,
-        "username": "website@example.com",
-        "password": "verySecurePassword",
-        "timeout": "5s",
-        "force_tls": true
-    }
+    "honeypot": "street",
+    "fields": [
+      {
+        "name": "name",
+        "type": "text",
+        "required": true
+      },
+      {
+        "name": "mail_addr",
+        "type": "email",
+        "required": true
+      },
+      {
+        "name": "terms_checked",
+        "type": "matchval",
+        "value": "on",
+        "required": true
+      }
+    ]
+  },
+  "server": {
+    "host": "mail.example.com",
+    "port": 25,
+    "username": "website@example.com",
+    "password": "verySecurePassword",
+    "timeout": "5s",
+    "force_tls": true
+  }
 }
 ```
 
@@ -138,17 +142,17 @@ the JSON syntax of the form configuration is very simple, yet flexible.
     * `subject (type: string)`: Subject for the mail notification of the form submission
     * `fields (type: []string)`: List of field names that should show up in the mail notification
 * `validation (type: struct)`: The struct for the form validation configuration
-  * `hcaptcha (type: struct)`: The struct for the forms hCaptcha configuration
-      * `enabled (type: bool)`: Enable hCaptcha challenge-response validation
-      * `secret_key (type: string)`: Your hCaptcha secret key
-  * `recaptcha (type: struct)`: The struct for the forms reCaptcha configuration
-      * `enabled (type: bool)`: Enable reCaptcha challenge-response validation
-      * `secret_key (type: string)`: Your reCaptcha secret key
-  * `honeypot (type: string)`: Name of the honeypot field, that is expected to be empty (Anti-SPAM)
-  * `fields (type: []struct)`: Array of single field validation configurations
-    * `name (type: string)`: Field validation identifier
-    * `type (type: string)`: Type of validation to run on field (text, email, nummber, bool)
-    * `required (type: boolean)`: If set to true, the field is required
+    * `hcaptcha (type: struct)`: The struct for the forms hCaptcha configuration
+        * `enabled (type: bool)`: Enable hCaptcha challenge-response validation
+        * `secret_key (type: string)`: Your hCaptcha secret key
+    * `recaptcha (type: struct)`: The struct for the forms reCaptcha configuration
+        * `enabled (type: bool)`: Enable reCaptcha challenge-response validation
+        * `secret_key (type: string)`: Your reCaptcha secret key
+    * `honeypot (type: string)`: Name of the honeypot field, that is expected to be empty (Anti-SPAM)
+    * `fields (type: []struct)`: Array of single field validation configurations
+        * `name (type: string)`: Field validation identifier
+        * `type (type: string)`: Type of validation to run on field (text, email, nummber, bool)
+        * `required (type: boolean)`: If set to true, the field is required
 * `server (type: struct)`: The struct for the forms mail server configuration
     * `host (type: string)`: Hostname of the sending mail server
     * `port (type: uint32)`: Port to connect to on the sending mail server
@@ -176,9 +180,9 @@ The succss response JSON struct is very simple:
 
 ```json
 {
-    "status_code": 200,
-    "status": "Ok",
-    "data": {}
+  "status_code": 200,
+  "status": "Ok",
+  "data": {}
 }
 ```
 
@@ -192,13 +196,13 @@ The `data` object of the success response for a successful token retrieval looks
 
 ```json
 {
-    "token": "5b19fca2b154a2681f8d6014c63b5f81bdfdd01036a64f8a835465ab5247feff",
-    "form_id": "test_form",
-    "create_time": 1628670201,
-    "expire_time": 1628670801,
-    "url": "https://jsmailer.example.com/api/v1/send/test_form/5b19fca2b154a2681f8d6014c63b5f81bdfdd01036a64f8a835465ab5247feff",
-    "enc_type": "multipart/form-data",
-    "method": "post"
+  "token": "5b19fca2b154a2681f8d6014c63b5f81bdfdd01036a64f8a835465ab5247feff",
+  "form_id": "test_form",
+  "create_time": 1628670201,
+  "expire_time": 1628670801,
+  "url": "https://jsmailer.example.com/api/v1/send/test_form/5b19fca2b154a2681f8d6014c63b5f81bdfdd01036a64f8a835465ab5247feff",
+  "enc_type": "multipart/form-data",
+  "method": "post"
 }
 ```
 
@@ -218,8 +222,8 @@ The API response to a send request (`/api/v1/send/<formid>/<token>`) looks like 
 
 ```json
 {
-    "form_id": "test_form",
-    "send_time": 1628670331
+  "form_id": "test_form",
+  "send_time": 1628670331
 }
 ```
 
@@ -232,10 +236,10 @@ The error response JSON struct is also very simple:
 
 ```json
 {
-    "status_code": 404,
-    "status": "Not Found",
-    "error_message": "Validation failed",
-    "error_data": "Not a valid send URL"
+  "status_code": 404,
+  "status": "Not Found",
+  "error_message": "Validation failed",
+  "error_data": "Not a valid send URL"
 }
 ```
 
