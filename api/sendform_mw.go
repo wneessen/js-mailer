@@ -157,10 +157,6 @@ func (r *Route) SendFormReqFields(next echo.HandlerFunc) echo.HandlerFunc {
 		}
 		if len(invalidFields) > 0 {
 			c.Logger().Errorf("Form field validation failed: %s", strings.Join(invalidFields, ", "))
-			var errorMsg []string
-			for _, f := range invalidFields {
-				errorMsg = append(errorMsg, fmt.Sprintf("%s: %s", f, fieldError[f]))
-			}
 			return echo.NewHTTPError(http.StatusBadRequest, &response.ErrorObj{
 				Message: "fields(s) validation failed",
 				Data:    fieldError,
