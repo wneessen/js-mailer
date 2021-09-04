@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/cyphar/filepath-securejoin"
 	"github.com/kkyr/fig"
-	log "github.com/sirupsen/logrus"
 	"github.com/wneessen/js-mailer/config"
 	"os"
 )
@@ -46,30 +45,25 @@ type Form struct {
 type ValidationField struct {
 	Name     string `fig:"name" validate:"required"`
 	Type     string `fig:"type"`
+	Value    string `fig:"value"`
 	Required bool   `fig:"required"`
 }
 
 // NewForm returns a new Form object to the caller. It fails with an error when
 // the form is question wasn't found or does not fulfill the syntax requirements
 func NewForm(c *config.Config, i string) (Form, error) {
-	l := log.WithFields(log.Fields{
-		"action": "form.NewForm",
-	})
 	formPath, err := securejoin.SecureJoin(c.Forms.Path, fmt.Sprintf("%s.json", i))
 	if err != nil {
-		l.Errorf("Failed to securely join forms path and form id")
-		return Form{}, fmt.Errorf("not a valid form id")
+		return Form{}, fmt.Errorf("failed to securely join forms path and form id")
 	}
 	_, err = os.Stat(formPath)
 	if err != nil {
-		l.Errorf("Failed to stat form config: %s", err)
-		return Form{}, fmt.Errorf("not a valid form id")
+		return Form{}, fmt.Errorf("failed to stat form config: %s", err)
 	}
 	var formObj Form
 	if err := fig.Load(&formObj, fig.File(fmt.Sprintf("%s.json", i)),
 		fig.Dirs(c.Forms.Path)); err != nil {
-		l.Errorf("Failed to read form config: %s", err)
-		return Form{}, fmt.Errorf("Not a valid form id")
+		return Form{}, fmt.Errorf("failed to read form config: %s", err)
 	}
 
 	return formObj, nil

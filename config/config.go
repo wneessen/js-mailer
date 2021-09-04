@@ -6,24 +6,26 @@ import (
 	log "github.com/sirupsen/logrus"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 // Config represents the global config object struct
 type Config struct {
 	Loglevel string `fig:"loglevel" default:"debug"`
-	Api      struct {
-		Addr string `fig:"bind_addr"`
-		Port uint32 `fig:"port" default:"8765"`
+	Forms    struct {
+		Path string `fig:"path" validate:"required"`
 	}
-	Forms struct {
-		Path      string `fig:"path" validate:"required"`
-		MaxLength int64  `fig:"maxlength" default:"1024000"`
+	Server struct {
+		Addr         string        `fig:"bind_addr"`
+		Port         uint32        `fig:"port" default:"8765"`
+		Timeout      time.Duration `fig:"timeout" default:"15s"`
+		RequestLimit string        `fig:"request_limit" default:"10M"`
 	}
 }
 
 // NewConfig returns a new Config object and fails if the configuration was not found or
 // has bad syntax
-func NewConfig() Config {
+func NewConfig() *Config {
 	l := log.WithFields(log.Fields{
 		"action": "config.NewConfig",
 	})
@@ -46,5 +48,5 @@ func NewConfig() Config {
 		os.Exit(1)
 	}
 
-	return confObj
+	return &confObj
 }
