@@ -1,4 +1,4 @@
-package apirequest
+package api
 
 import (
 	"fmt"
@@ -8,20 +8,20 @@ import (
 
 // GetForm gets a form.Form object either from the in-memory cache or if not cached
 // yet, from the file system
-func (a *ApiRequest) GetForm(i string) (form.Form, error) {
+func (r *Route) GetForm(i string) (form.Form, error) {
 	var formObj form.Form
-	cacheForm, err := a.Cache.Get(fmt.Sprintf("formObj_%s", i))
+	cacheForm, err := r.Cache.Get(fmt.Sprintf("formObj_%s", i))
 	if err != nil && err != ttlcache.ErrNotFound {
 		return formObj, err
 	}
 	if cacheForm != nil {
 		formObj = cacheForm.(form.Form)
 	} else {
-		formObj, err = form.NewForm(a.Config, i)
+		formObj, err = form.NewForm(r.Config, i)
 		if err != nil {
 			return formObj, err
 		}
-		if err := a.Cache.Set(fmt.Sprintf("formObj_%s", formObj.Id), formObj); err != nil {
+		if err := r.Cache.Set(fmt.Sprintf("formObj_%s", formObj.Id), formObj); err != nil {
 			return formObj, err
 		}
 	}
