@@ -16,9 +16,9 @@ type Form struct {
 	}
 	Confirmation struct {
 		Enabled        bool   `fig:"enabled"`
-		RecipientField string `fig:"rcpt_field" validate:"required"`
-		Subject        string `fig:"subject" validate:"required"`
-		Content        string `fig:"content" validate:"required"`
+		RecipientField string `fig:"rcpt_field"`
+		Subject        string `fig:"subject"`
+		Content        string `fig:"content"`
 	}
 	Domains    []string `fig:"domains" validate:"required"`
 	Id         string   `fig:"id" validate:"required"`
