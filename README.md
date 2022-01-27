@@ -19,6 +19,7 @@ API that can be accessed via JavaScript `Fetch()` or `XMLHttpRequest`.
 * hCaptcha support
 * reCaptcha v2 support
 * Form field type validation (text, email, number, bool)
+* Confirmation mail to poster
 
 ### Planed features
 
@@ -94,6 +95,12 @@ the JSON syntax of the form configuration is very simple, yet flexible.
       "message"
     ]
   },
+  "confirmation": {
+    "enabled": true,
+    "rcpt_field": "email",
+    "subject": "Thank you for your message",
+    "content": "We have received your message via www.example.com and will tough base with you, shortly."
+  },
   "validation": {
     "hcaptcha": {
       "enabled": true,
@@ -141,6 +148,12 @@ the JSON syntax of the form configuration is very simple, yet flexible.
 * `content (type: struct)`: The struct for the mail content configuration
     * `subject (type: string)`: Subject for the mail notification of the form submission
     * `fields (type: []string)`: List of field names that should show up in the mail notification
+* `confirmation (type: struct)`: The struct for the mail confirmail mail configuration
+    * `enabled (type: boolean)`: If true, the confirmation mail will be sent
+    * `rcpt_field (type: string)`: Name of the form field holding the confirmation mail recipient
+    * `subject (type: string)`: Subject for the confirmation mail
+    * `content (type: string)`: Content for the confirmation mail
+      * `fields (type: []string)`: List of field names that should show up in the mail notification
 * `validation (type: struct)`: The struct for the form validation configuration
     * `hcaptcha (type: struct)`: The struct for the forms hCaptcha configuration
         * `enabled (type: bool)`: Enable hCaptcha challenge-response validation
@@ -223,12 +236,16 @@ The API response to a send request (`/api/v1/send/<formid>/<token>`) looks like 
 ```json
 {
   "form_id": "test_form",
-  "send_time": 1628670331
+  "send_time": 1628670331,
+  "confirmation_sent": true,
+  "confirmation_rcpt": "toni.tester@example.com"
 }
 ```
 
 * `form_id (type: string)`: The form id of the current form (for reference)
 * `send_time (type: int64)`: The epoch timestamp when the message was sent
+* `confirmation_sent (type: boolean)`: Is set to true, if a confirmation was sent successfully
+* `confirmation_rcpt (type: string)`: The recipient mail address that the confirmation was sent to
 
 ### Error response
 
