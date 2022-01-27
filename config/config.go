@@ -3,7 +3,7 @@ package config
 import (
 	"fmt"
 	"github.com/kkyr/fig"
-	log "github.com/sirupsen/logrus"
+	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -26,9 +26,8 @@ type Config struct {
 // NewConfig returns a new Config object and fails if the configuration was not found or
 // has bad syntax
 func NewConfig() *Config {
-	l := log.WithFields(log.Fields{
-		"action": "config.NewConfig",
-	})
+	lf := log.Lmsgprefix | log.LstdFlags
+	el := log.New(os.Stderr, "[ERROR] ", lf)
 
 	confFileName := "js-mailer.json"
 	confFilePath := "/etc/js-mailer/"
@@ -38,13 +37,13 @@ func NewConfig() *Config {
 	}
 	_, err := os.Stat(fmt.Sprintf("%s/%s", confFilePath, confFileName))
 	if err != nil {
-		l.Errorf("Failed to read config file %s/%s: %s", confFilePath, confFileName, err)
+		el.Printf("Failed to read config file %s/%s: %s", confFilePath, confFileName, err)
 		os.Exit(1)
 	}
 
 	var confObj Config
 	if err := fig.Load(&confObj, fig.File(confFileName), fig.Dirs(confFilePath)); err != nil {
-		l.Fatalf("Failed to read config from file: %s", err)
+		el.Printf("Failed to read config from file: %s", err)
 		os.Exit(1)
 	}
 
