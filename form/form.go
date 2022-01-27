@@ -10,28 +10,22 @@ import (
 
 // Form reflect the configuration struct for form configurations
 type Form struct {
-	Id         string   `fig:"id" validate:"required"`
-	Secret     string   `fig:"secret" validate:"required"`
-	Recipients []string `fig:"recipients" validate:"required"`
-	Sender     string   `fig:"sender" validate:"required"`
-	Domains    []string `fig:"domains" validate:"required"`
-	Validation struct {
-		Hcaptcha struct {
-			Enabled   bool   `fig:"enabled"`
-			SecretKey string `fig:"secret_key"`
-		}
-		Recaptcha struct {
-			Enabled   bool   `fig:"enabled"`
-			SecretKey string `fig:"secret_key"`
-		}
-		Fields   []ValidationField `fig:"fields"`
-		Honeypot *string           `fig:"honeypot"`
-	}
 	Content struct {
 		Subject string
 		Fields  []string
 	}
-	Server struct {
+	Confirmation struct {
+		Enabled        bool   `fig:"enabled"`
+		RecipientField string `fig:"rcpt_field" validate:"required"`
+		Subject        string `fig:"subject" validate:"required"`
+		Content        string `fig:"content" validate:"required"`
+	}
+	Domains    []string `fig:"domains" validate:"required"`
+	Id         string   `fig:"id" validate:"required"`
+	Recipients []string `fig:"recipients" validate:"required"`
+	Secret     string   `fig:"secret" validate:"required"`
+	Sender     string   `fig:"sender" validate:"required"`
+	Server     struct {
 		Host     string `fig:"host" validate:"required"`
 		Port     int    `fig:"port" default:"25"`
 		Username string
@@ -39,14 +33,26 @@ type Form struct {
 		Timeout  string `fig:"timeout" default:"5s"`
 		ForceTLS bool   `fig:"force_tls"`
 	}
+	Validation struct {
+		Fields   []ValidationField `fig:"fields"`
+		Hcaptcha struct {
+			Enabled   bool   `fig:"enabled"`
+			SecretKey string `fig:"secret_key"`
+		}
+		Honeypot  *string `fig:"honeypot"`
+		Recaptcha struct {
+			Enabled   bool   `fig:"enabled"`
+			SecretKey string `fig:"secret_key"`
+		}
+	}
 }
 
 // ValidationField reflects the struct for a form validation field
 type ValidationField struct {
 	Name     string `fig:"name" validate:"required"`
+	Required bool   `fig:"required"`
 	Type     string `fig:"type"`
 	Value    string `fig:"value"`
-	Required bool   `fig:"required"`
 }
 
 // NewForm returns a new Form object to the caller. It fails with an error when
