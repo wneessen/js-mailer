@@ -23,9 +23,12 @@ type Form struct {
 	Domains    []string `fig:"domains" validate:"required"`
 	Id         string   `fig:"id" validate:"required"`
 	Recipients []string `fig:"recipients" validate:"required"`
-	Secret     string   `fig:"secret" validate:"required"`
-	Sender     string   `fig:"sender" validate:"required"`
-	Server     struct {
+	ReplyTo    struct {
+		Field string `json:"field"`
+	}
+	Secret string `fig:"secret" validate:"required"`
+	Sender string `fig:"sender" validate:"required"`
+	Server struct {
 		Host     string `fig:"host" validate:"required"`
 		Port     int    `fig:"port" default:"25"`
 		Username string

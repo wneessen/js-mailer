@@ -20,6 +20,7 @@ API that can be accessed via JavaScript `Fetch()` or `XMLHttpRequest`.
 * reCaptcha v2 support
 * Form field type validation (text, email, number, bool)
 * Confirmation mail to poster
+* Custom Reply-To header based on sending mail address
 
 ### Planed features
 
@@ -95,6 +96,9 @@ the JSON syntax of the form configuration is very simple, yet flexible.
       "message"
     ]
   },
+  "replyto": {
+    "field": "email"
+  },
   "confirmation": {
     "enabled": true,
     "rcpt_field": "email",
@@ -166,6 +170,8 @@ the JSON syntax of the form configuration is very simple, yet flexible.
         * `name (type: string)`: Field validation identifier
         * `type (type: string)`: Type of validation to run on field (text, email, nummber, bool)
         * `required (type: boolean)`: If set to true, the field is required
+* `replyto (type: struct)`: The struct for the reply to configuration
+    * `rcpt_field (type: string)`: Name of the form field holding the reply-to mail sender address
 * `server (type: struct)`: The struct for the forms mail server configuration
     * `host (type: string)`: Hostname of the sending mail server
     * `port (type: uint32)`: Port to connect to on the sending mail server

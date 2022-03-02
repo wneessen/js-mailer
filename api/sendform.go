@@ -59,6 +59,12 @@ func (r *Route) SendForm(c echo.Context) error {
 	mailMsg.SetHeader("From", sr.FormObj.Sender)
 	mailMsg.SetHeader("To", sr.FormObj.Recipients...)
 	mailMsg.SetHeader("Subject", sr.FormObj.Content.Subject)
+	if sr.FormObj.ReplyTo.Field != "" {
+		sf := c.FormValue(sr.FormObj.ReplyTo.Field)
+		if sf != "" {
+			mailMsg.SetHeader("Reply-To", sf)
+		}
+	}
 
 	mailBody := "The following form fields have been transmitted:\n"
 	for _, k := range sr.FormObj.Content.Fields {
