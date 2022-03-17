@@ -17,7 +17,7 @@ import (
 )
 
 // VERSION is the global version string contstant
-const VERSION = "0.2.3"
+const VERSION = "0.2.3b"
 
 // Srv represents the server object
 type Srv struct {
