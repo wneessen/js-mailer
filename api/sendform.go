@@ -54,23 +54,33 @@ func (r *Route) SendForm(c echo.Context) error {
 	}
 
 	// Compose the mail message
-	var mailerr error
 	mailMsg := mail.NewMsg()
-	mailerr = mailMsg.From(sr.FormObj.Sender)
-	mailerr = mailMsg.To(sr.FormObj.Recipients...)
+	if err := mailMsg.From(sr.FormObj.Sender); err != nil {
+		c.Logger().Errorf("failed to set FROM header: %s", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, &response.ErrorObj{
+			Message: "could not set MAIL FROM header",
+			Data:    err.Error(),
+		})
+	}
+	if err := mailMsg.To(sr.FormObj.Recipients...); err != nil {
+		c.Logger().Errorf("failed to set TO header: %s", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, &response.ErrorObj{
+			Message: "could not set RCPT TO header",
+			Data:    err.Error(),
+		})
+	}
 	mailMsg.Subject(sr.FormObj.Content.Subject)
 	if sr.FormObj.ReplyTo.Field != "" {
 		sf := c.FormValue(sr.FormObj.ReplyTo.Field)
 		if sf != "" {
-			mailerr = mailMsg.ReplyTo(sf)
+			if err := mailMsg.ReplyTo(sf); err != nil {
+				c.Logger().Errorf("failed to set REPLY-TO header: %s", err)
+				return echo.NewHTTPError(http.StatusInternalServerError, &response.ErrorObj{
+					Message: "could not set REPLY-TO header",
+					Data:    err.Error(),
+				})
+			}
 		}
-	}
-	if mailerr != nil {
-		c.Logger().Errorf("failed to generate mail object: %s", mailerr)
-		return echo.NewHTTPError(http.StatusInternalServerError, &response.ErrorObj{
-			Message: "could not connect to configured mail server",
-			Data:    mailerr.Error(),
-		})
 	}
 
 	mailBody := "The following form fields have been transmitted:\n"
@@ -112,16 +122,15 @@ func (r *Route) SendForm(c echo.Context) error {
 
 // SendFormConfirmation sends out a confirmation mail if requested in the form
 func SendFormConfirmation(f *form.Form, r string) error {
-	var mailerr error
 	mailMsg := mail.NewMsg()
-	mailerr = mailMsg.From(f.Sender)
-	mailerr = mailMsg.To(r)
+	if err := mailMsg.From(f.Sender); err != nil {
+		return fmt.Errorf("failed to set FROM header: %w", err)
+	}
+	if err := mailMsg.To(r); err != nil {
+		return fmt.Errorf("failed to set TO header: %w", err)
+	}
 	mailMsg.Subject(f.Confirmation.Subject)
 	mailMsg.SetBodyString(mail.TypeTextPlain, f.Confirmation.Content)
-	if mailerr != nil {
-		return fmt.Errorf("failed to create mail message: %w", mailerr)
-	}
-
 	mc, err := GetMailClient(f)
 	if err != nil {
 		return fmt.Errorf("failed to create mail client: %w", err)
