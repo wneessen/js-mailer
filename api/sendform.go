@@ -2,13 +2,12 @@ package api
 
 import (
 	"fmt"
+	"github.com/labstack/echo/v4"
+	"github.com/wneessen/go-mail"
 	"github.com/wneessen/js-mailer/form"
 	"github.com/wneessen/js-mailer/response"
 	"net/http"
 	"time"
-
-	"github.com/go-mail/mail"
-	"github.com/labstack/echo/v4"
 )
 
 // SentSuccessful represents confirmation JSON structure for a successfully sent message
@@ -55,15 +54,23 @@ func (r *Route) SendForm(c echo.Context) error {
 	}
 
 	// Compose the mail message
-	mailMsg := mail.NewMessage()
-	mailMsg.SetHeader("From", sr.FormObj.Sender)
-	mailMsg.SetHeader("To", sr.FormObj.Recipients...)
-	mailMsg.SetHeader("Subject", sr.FormObj.Content.Subject)
+	var mailerr error
+	mailMsg := mail.NewMsg()
+	mailerr = mailMsg.From(sr.FormObj.Sender)
+	mailerr = mailMsg.To(sr.FormObj.Recipients...)
+	mailMsg.Subject(sr.FormObj.Content.Subject)
 	if sr.FormObj.ReplyTo.Field != "" {
 		sf := c.FormValue(sr.FormObj.ReplyTo.Field)
 		if sf != "" {
-			mailMsg.SetHeader("Reply-To", sf)
+			mailerr = mailMsg.ReplyTo(sf)
 		}
+	}
+	if mailerr != nil {
+		c.Logger().Errorf("failed to generate mail object: %s", mailerr)
+		return echo.NewHTTPError(http.StatusInternalServerError, &response.ErrorObj{
+			Message: "could not connect to configured mail server",
+			Data:    mailerr.Error(),
+		})
 	}
 
 	mailBody := "The following form fields have been transmitted:\n"
@@ -72,24 +79,18 @@ func (r *Route) SendForm(c echo.Context) error {
 			mailBody = fmt.Sprintf("%s\n* %s => %s", mailBody, k, v)
 		}
 	}
-	mailMsg.SetBody("text/plain", mailBody)
+	mailMsg.SetBodyString(mail.TypeTextPlain, mailBody)
 
 	// Send the mail message
-	mailDailer := GetMailDailer(sr.FormObj)
-	mailSender, err := mailDailer.Dial()
+	mc, err := GetMailClient(sr.FormObj)
 	if err != nil {
-		c.Logger().Errorf("Could not connect to configured mail server: %s", err)
+		c.Logger().Errorf("Could not create new mail client: %s", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, &response.ErrorObj{
-			Message: "could not connect to configured mail server",
+			Message: "Cloud not create new mail client",
 			Data:    err.Error(),
 		})
 	}
-	defer func() {
-		if err := mailSender.Close(); err != nil {
-			c.Logger().Errorf("Failed to close mail server connection: %s", err)
-		}
-	}()
-	if err := mail.Send(mailSender, mailMsg); err != nil {
+	if err := mc.DialAndSend(mailMsg); err != nil {
 		c.Logger().Errorf("Could not send mail message: %s", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, &response.ErrorObj{
 			Message: "could not send mail message",
@@ -111,36 +112,42 @@ func (r *Route) SendForm(c echo.Context) error {
 
 // SendFormConfirmation sends out a confirmation mail if requested in the form
 func SendFormConfirmation(f *form.Form, r string) error {
-	mailMsg := mail.NewMessage()
-	mailMsg.SetHeader("From", f.Sender)
-	mailMsg.SetHeader("To", r)
-	mailMsg.SetHeader("Subject", f.Confirmation.Subject)
-	mailMsg.SetBody("text/plain", f.Confirmation.Content)
-	mailDailer := GetMailDailer(f)
-	mailSender, err := mailDailer.Dial()
+	var mailerr error
+	mailMsg := mail.NewMsg()
+	mailerr = mailMsg.From(f.Sender)
+	mailerr = mailMsg.To(r)
+	mailMsg.Subject(f.Confirmation.Subject)
+	mailMsg.SetBodyString(mail.TypeTextPlain, f.Confirmation.Content)
+	if mailerr != nil {
+		return fmt.Errorf("failed to create mail message: %w", mailerr)
+	}
+
+	mc, err := GetMailClient(f)
 	if err != nil {
-		return fmt.Errorf("could not connect to configured mail server: %w", err)
+		return fmt.Errorf("failed to create mail client: %w", err)
 	}
-	if err := mail.Send(mailSender, mailMsg); err != nil {
+	if err := mc.DialAndSend(mailMsg); err != nil {
 		return fmt.Errorf("could not send confirmation mail message: %w", err)
-	}
-	if err := mailSender.Close(); err != nil {
-		return fmt.Errorf("failed to close mail server connection: %w", err)
 	}
 	return nil
 }
 
-// GetMailDailer returns a new mail dailer object based on the form configuration
-func GetMailDailer(f *form.Form) *mail.Dialer {
+// GetMailClient returns a new mail dailer object based on the form configuration
+func GetMailClient(f *form.Form) (*mail.Client, error) {
 	var serverTimeout time.Duration
 	serverTimeout, err := time.ParseDuration(f.Server.Timeout)
 	if err != nil {
 		serverTimeout = time.Second * 5
 	}
-	mailDailer := mail.NewDialer(f.Server.Host, f.Server.Port, f.Server.Username, f.Server.Password)
-	mailDailer.Timeout = serverTimeout
-	if f.Server.ForceTLS {
-		mailDailer.StartTLSPolicy = mail.MandatoryStartTLS
+	mc, err := mail.NewClient(f.Server.Host, mail.WithPort(f.Server.Port),
+		mail.WithUsername(f.Server.Username), mail.WithPassword(f.Server.Password),
+		mail.WithSMTPAuth(mail.SMTPAuthPlain), mail.WithTimeout(serverTimeout))
+
+	if err != nil {
+		return mc, err
 	}
-	return mailDailer
+	if !f.Server.ForceTLS {
+		mc.SetTLSPolicy(mail.TLSOpportunistic)
+	}
+	return mc, nil
 }
