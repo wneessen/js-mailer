@@ -1,5 +1,5 @@
 ## Build first
-FROM golang:alpine as builder
+FROM golang:latest as builder
 RUN mkdir /builddir
 ADD . /builddir/
 WORKDIR /builddir
