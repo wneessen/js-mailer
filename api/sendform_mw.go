@@ -37,6 +37,13 @@ type HcaptchaResponse CaptchaResponse
 // ReCaptchaResponse is the CaptchaResponse for Google ReCaptcha
 type ReCaptchaResponse CaptchaResponse
 
+// List of common errors
+const (
+	ErrNoValidObject           = "no valid form object found"
+	ErrHCaptchaValidateFailed  = "hCaptcha validation failed"
+	ErrReCaptchaVaildateFailed = "reCaptcha validation failed"
+)
+
 // SendFormBindForm is a middleware that validates the provided form data and binds
 // it to a SendFormRequest object
 func (r *Route) SendFormBindForm(next echo.HandlerFunc) echo.HandlerFunc {
@@ -93,7 +100,7 @@ func (r *Route) SendFormReqFields(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		sr := c.Get("formobj").(*SendFormRequest)
 		if sr == nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "no valid form object found")
+			return echo.NewHTTPError(http.StatusInternalServerError, ErrNoValidObject)
 		}
 
 		var invalidFields []string
@@ -173,7 +180,7 @@ func (r *Route) SendFormHoneypot(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		sr := c.Get("formobj").(*SendFormRequest)
 		if sr == nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "no valid form object found")
+			return echo.NewHTTPError(http.StatusInternalServerError, ErrNoValidObject)
 		}
 
 		if sr.FormObj.Validation.Honeypot != nil {
@@ -192,7 +199,7 @@ func (r *Route) SendFormHcaptcha(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		sr := c.Get("formobj").(*SendFormRequest)
 		if sr == nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "no valid form object found")
+			return echo.NewHTTPError(http.StatusInternalServerError, ErrNoValidObject)
 		}
 
 		if sr.FormObj.Validation.Hcaptcha.Enabled {
@@ -209,20 +216,20 @@ func (r *Route) SendFormHcaptcha(next echo.HandlerFunc) echo.HandlerFunc {
 			httpResp, err := http.PostForm("https://hcaptcha.com/siteverify", postData)
 			if err != nil {
 				c.Logger().Errorf("failed to post HTTP request to hCaptcha: %s", err)
-				return echo.NewHTTPError(http.StatusInternalServerError, "hCaptcha validation failed")
+				return echo.NewHTTPError(http.StatusInternalServerError, ErrHCaptchaValidateFailed)
 			}
 
 			var respBody bytes.Buffer
 			_, err = respBody.ReadFrom(httpResp.Body)
 			if err != nil {
 				c.Logger().Errorf("reading HTTP response body failed: %s", err)
-				return echo.NewHTTPError(http.StatusInternalServerError, "hCaptcha validation failed")
+				return echo.NewHTTPError(http.StatusInternalServerError, ErrHCaptchaValidateFailed)
 			}
 			if httpResp.StatusCode == http.StatusOK {
 				var hcapResp HcaptchaResponse
 				if err := json.Unmarshal(respBody.Bytes(), &hcapResp); err != nil {
 					c.Logger().Errorf("HTTP response JSON unmarshalling failed: %s", err)
-					return echo.NewHTTPError(http.StatusInternalServerError, "hCaptcha validation failed")
+					return echo.NewHTTPError(http.StatusInternalServerError, ErrHCaptchaValidateFailed)
 				}
 				if !hcapResp.Success {
 					return echo.NewHTTPError(http.StatusBadRequest,
@@ -244,7 +251,7 @@ func (r *Route) SendFormRecaptcha(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		sr := c.Get("formobj").(*SendFormRequest)
 		if sr == nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "no valid form object found")
+			return echo.NewHTTPError(http.StatusInternalServerError, ErrNoValidObject)
 		}
 
 		if sr.FormObj.Validation.Recaptcha.Enabled {
@@ -261,20 +268,20 @@ func (r *Route) SendFormRecaptcha(next echo.HandlerFunc) echo.HandlerFunc {
 			httpResp, err := http.PostForm("https://www.google.com/recaptcha/api/siteverify", postData)
 			if err != nil {
 				c.Logger().Errorf("failed to post HTTP request to reCaptcha: %s", err)
-				return echo.NewHTTPError(http.StatusInternalServerError, "reCaptcha validation failed")
+				return echo.NewHTTPError(http.StatusInternalServerError, ErrReCaptchaVaildateFailed)
 			}
 
 			var respBody bytes.Buffer
 			_, err = respBody.ReadFrom(httpResp.Body)
 			if err != nil {
 				c.Logger().Errorf("reading HTTP response body failed: %s", err)
-				return echo.NewHTTPError(http.StatusInternalServerError, "reCaptcha validation failed")
+				return echo.NewHTTPError(http.StatusInternalServerError, ErrReCaptchaVaildateFailed)
 			}
 			if httpResp.StatusCode == http.StatusOK {
 				var recapResp ReCaptchaResponse
 				if err := json.Unmarshal(respBody.Bytes(), &recapResp); err != nil {
 					c.Logger().Errorf("HTTP response JSON unmarshalling failed: %s", err)
-					return echo.NewHTTPError(http.StatusInternalServerError, "reCaptcha validation failed")
+					return echo.NewHTTPError(http.StatusInternalServerError, ErrReCaptchaVaildateFailed)
 				}
 				if !recapResp.Success {
 					return echo.NewHTTPError(http.StatusBadRequest,
@@ -296,7 +303,7 @@ func (r *Route) SendFormCheckToken(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		sr := c.Get("formobj").(*SendFormRequest)
 		if sr == nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "no valid form object found")
+			return echo.NewHTTPError(http.StatusInternalServerError, ErrNoValidObject)
 		}
 
 		reqOrigin := c.Request().Header.Get("origin")
