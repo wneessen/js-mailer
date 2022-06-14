@@ -36,8 +36,8 @@ github.com/valyala/bytebufferpool v1.0.0 h1:GqA5TC/0021Y/b9FG4Oi9Mr3q7XYx6Kllzaw
 github.com/valyala/bytebufferpool v1.0.0/go.mod h1:6bBcMArwyJ5K/AmCkWv1jt77kVWyCJ6HpOuEn7z0Csc=
 github.com/valyala/fasttemplate v1.2.1 h1:TVEnxayobAdVkhQfrfes2IzOB6o+z4roRkPF52WA1u4=
 github.com/valyala/fasttemplate v1.2.1/go.mod h1:KHLXt3tVN2HBp8eijSv/kGJopbvo7S+qRAEEKiv+SiQ=
-github.com/wneessen/go-mail v0.2.3 h1:fnEghnMIOu5CY6biEQU72GvKkUJAenJRPMA/Bm3AFvA=
-github.com/wneessen/go-mail v0.2.3/go.mod h1:5JFKEGsldD2Fh5O+Lxzhre3GLOcJznWrzqZaJwTs300=
+github.com/wneessen/go-mail v0.2.4 h1:fgSyXjNRleT3p7d7iXsaoW/LZmksNovS2Bt0MNFR4JQ=
+github.com/wneessen/go-mail v0.2.4/go.mod h1:5JFKEGsldD2Fh5O+Lxzhre3GLOcJznWrzqZaJwTs300=
 github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 go.uber.org/goleak v1.1.10 h1:z+mqJhf6ss6BSfSM671tgKyZBFPTTJM+HLxnhPC3wu0=
 go.uber.org/goleak v1.1.10/go.mod h1:8a7PlsEVH3e/a/GLqe5IIrQx6GzcnRmZEufDUTk4A7A=
