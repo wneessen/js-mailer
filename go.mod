@@ -8,6 +8,6 @@ require (
 	github.com/kkyr/fig v0.3.0
 	github.com/labstack/echo/v4 v4.8.0
 	github.com/labstack/gommon v0.3.1
-	github.com/wneessen/go-mail v0.2.5
+	github.com/wneessen/go-mail v0.2.6
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
