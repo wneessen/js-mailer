@@ -3,6 +3,7 @@ FROM golang:latest as builder
 RUN mkdir /builddir
 ADD . /builddir/
 WORKDIR /builddir
+RUN go mod download && go mod verify
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -ldflags '-w -s -extldflags "-static"' -o js-mailer \
     github.com/wneessen/js-mailer
 
