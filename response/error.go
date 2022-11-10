@@ -1,8 +1,10 @@
 package response
 
 import (
-	"github.com/labstack/echo/v4"
+	"errors"
 	"net/http"
+
+	"github.com/labstack/echo/v4"
 )
 
 // ErrorObj is the structure of an error
@@ -24,7 +26,8 @@ func CustomError(err error, c echo.Context) {
 	errResp := &ErrorResponse{
 		StatusCode: http.StatusInternalServerError,
 	}
-	if he, ok := err.(*echo.HTTPError); ok {
+	var he *echo.HTTPError
+	if errors.As(err, &he) {
 		errResp.StatusCode = he.Code
 		errResp.Status = http.StatusText(errResp.StatusCode)
 		if em, ok := he.Message.(*echo.HTTPError); ok {

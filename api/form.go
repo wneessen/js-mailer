@@ -1,8 +1,10 @@
 package api
 
 import (
+	"errors"
 	"fmt"
-	"github.com/ReneKroon/ttlcache/v2"
+
+	"github.com/jellydator/ttlcache/v2"
 	"github.com/wneessen/js-mailer/form"
 )
 
@@ -11,7 +13,7 @@ import (
 func (r *Route) GetForm(i string) (form.Form, error) {
 	var formObj form.Form
 	cacheForm, err := r.Cache.Get(fmt.Sprintf("formObj_%s", i))
-	if err != nil && err != ttlcache.ErrNotFound {
+	if err != nil && !errors.Is(err, ttlcache.ErrNotFound) {
 		return formObj, err
 	}
 	if cacheForm != nil {
@@ -21,7 +23,7 @@ func (r *Route) GetForm(i string) (form.Form, error) {
 		if err != nil {
 			return formObj, err
 		}
-		if err := r.Cache.Set(fmt.Sprintf("formObj_%s", formObj.Id), formObj); err != nil {
+		if err := r.Cache.Set(fmt.Sprintf("formObj_%s", formObj.ID), formObj); err != nil {
 			return formObj, err
 		}
 	}

@@ -3,25 +3,26 @@ package api
 import (
 	"crypto/sha256"
 	"fmt"
-	"github.com/labstack/echo/v4"
-	"github.com/wneessen/js-mailer/response"
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/labstack/echo/v4"
+	"github.com/wneessen/js-mailer/response"
 )
 
 // TokenRequest reflects the incoming gettoken request data that for the parameter binding
 type TokenRequest struct {
-	FormId string `query:"formid" form:"formid"`
+	FormID string `query:"formid" form:"formid"`
 }
 
 // TokenResponse reflects the JSON response struct for token request
 type TokenResponse struct {
 	Token      string `json:"token"`
-	FormId     string `json:"form_id"`
+	FormID     string `json:"form_id"`
 	CreateTime int64  `json:"create_time,omitempty"`
 	ExpireTime int64  `json:"expire_time,omitempty"`
-	Url        string `json:"url"`
+	URL        string `json:"url"`
 	EncType    string `json:"enc_type"`
 	Method     string `json:"method"`
 }
@@ -36,7 +37,7 @@ func (r *Route) GetToken(c echo.Context) error {
 	}
 
 	// Let's try to read formobj from cache
-	formObj, err := r.GetForm(fr.FormId)
+	formObj, err := r.GetForm(fr.FormID)
 	if err != nil {
 		c.Logger().Errorf("failed to get form object: %s", err)
 		return echo.NewHTTPError(http.StatusInternalServerError, &response.ErrorObj{
@@ -60,7 +61,7 @@ func (r *Route) GetToken(c echo.Context) error {
 		}
 	}
 	if !isValid {
-		c.Logger().Errorf("domain %q not in allowed domains list for form %s", reqOrigin, formObj.Id)
+		c.Logger().Errorf("domain %q not in allowed domains list for form %s", reqOrigin, formObj.ID)
 		return echo.NewHTTPError(http.StatusUnauthorized,
 			"domain is not authorized to access the requested form")
 	}
@@ -74,15 +75,15 @@ func (r *Route) GetToken(c echo.Context) error {
 	nowTime := time.Now()
 	expTime := time.Now().Add(time.Minute * 10)
 	tokenText := fmt.Sprintf("%s_%d_%d_%s_%s", reqOrigin, nowTime.Unix(), expTime.Unix(),
-		formObj.Id, formObj.Secret)
+		formObj.ID, formObj.Secret)
 	tokenSha := fmt.Sprintf("%x", sha256.Sum256([]byte(tokenText)))
 	respToken := TokenResponse{
 		Token:      tokenSha,
-		FormId:     formObj.Id,
+		FormID:     formObj.ID,
 		CreateTime: nowTime.Unix(),
 		ExpireTime: expTime.Unix(),
-		Url: fmt.Sprintf("%s://%s/api/v1/send/%s/%s", reqScheme,
-			c.Request().Host, url.QueryEscape(formObj.Id), url.QueryEscape(tokenSha)),
+		URL: fmt.Sprintf("%s://%s/api/v1/send/%s/%s", reqScheme,
+			c.Request().Host, url.QueryEscape(formObj.ID), url.QueryEscape(tokenSha)),
 		EncType: "multipart/form-data",
 		Method:  "post",
 	}

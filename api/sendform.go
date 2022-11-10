@@ -2,17 +2,18 @@ package api
 
 import (
 	"fmt"
+	"net/http"
+	"time"
+
 	"github.com/labstack/echo/v4"
 	"github.com/wneessen/go-mail"
 	"github.com/wneessen/js-mailer/form"
 	"github.com/wneessen/js-mailer/response"
-	"net/http"
-	"time"
 )
 
 // SentSuccessful represents confirmation JSON structure for a successfully sent message
 type SentSuccessful struct {
-	FormId           string `json:"form_id"`
+	FormID           string `json:"form_id"`
 	SendTime         int64  `json:"send_time"`
 	ConfirmationSent bool   `json:"confirmation_sent"`
 	ConfirmationRcpt string `json:"confirmation_rcpt"`
@@ -112,7 +113,7 @@ func (r *Route) SendForm(c echo.Context) error {
 		StatusCode: http.StatusOK,
 		Status:     http.StatusText(http.StatusOK),
 		Data: SentSuccessful{
-			FormId:           sr.FormObj.Id,
+			FormID:           sr.FormObj.ID,
 			SendTime:         time.Now().Unix(),
 			ConfirmationSent: confirmWasSent,
 			ConfirmationRcpt: confirmRcpt,
@@ -151,7 +152,6 @@ func GetMailClient(f *form.Form) (*mail.Client, error) {
 	mc, err := mail.NewClient(f.Server.Host, mail.WithPort(f.Server.Port),
 		mail.WithUsername(f.Server.Username), mail.WithPassword(f.Server.Password),
 		mail.WithSMTPAuth(mail.SMTPAuthPlain), mail.WithTimeout(serverTimeout))
-
 	if err != nil {
 		return mc, err
 	}

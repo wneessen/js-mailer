@@ -2,10 +2,11 @@ package form
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/cyphar/filepath-securejoin"
 	"github.com/kkyr/fig"
 	"github.com/wneessen/js-mailer/config"
-	"os"
 )
 
 // Form reflect the configuration struct for form configurations
@@ -21,7 +22,7 @@ type Form struct {
 		Content        string `fig:"content"`
 	}
 	Domains    []string `fig:"domains" validate:"required"`
-	Id         string   `fig:"id" validate:"required"`
+	ID         string   `fig:"id" validate:"required"`
 	Recipients []string `fig:"recipients" validate:"required"`
 	ReplyTo    struct {
 		Field string `json:"field"`
@@ -67,12 +68,12 @@ func NewForm(c *config.Config, i string) (Form, error) {
 	}
 	_, err = os.Stat(formPath)
 	if err != nil {
-		return Form{}, fmt.Errorf("failed to stat form config: %s", err)
+		return Form{}, fmt.Errorf("failed to stat form config: %w", err)
 	}
 	var formObj Form
 	if err := fig.Load(&formObj, fig.File(fmt.Sprintf("%s.json", i)),
 		fig.Dirs(c.Forms.Path)); err != nil {
-		return Form{}, fmt.Errorf("failed to read form config: %s", err)
+		return Form{}, fmt.Errorf("failed to read form config: %w", err)
 	}
 
 	return formObj, nil

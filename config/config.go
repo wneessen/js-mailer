@@ -2,11 +2,12 @@ package config
 
 import (
 	"fmt"
-	"github.com/kkyr/fig"
 	"log"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/kkyr/fig"
 )
 
 // Config represents the global config object struct

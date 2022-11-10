@@ -2,14 +2,16 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"github.com/wneessen/js-mailer/response"
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
 
-	"github.com/ReneKroon/ttlcache/v2"
+	"github.com/wneessen/js-mailer/response"
+
+	"github.com/jellydator/ttlcache/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
@@ -17,7 +19,7 @@ import (
 )
 
 // VERSION is the global version string contstant
-const VERSION = "0.2.7"
+const VERSION = "0.2.9"
 
 // Srv represents the server object
 type Srv struct {
@@ -41,7 +43,7 @@ func (s *Srv) Start() {
 	s.LogLevel()
 
 	// Register routes
-	s.RouterApi()
+	s.RouterAPI()
 
 	// Middlewares
 	s.Echo.Use(middleware.Recover())
@@ -54,7 +56,7 @@ func (s *Srv) Start() {
 		s.Echo.Logger.Infof("Starting js-mailer v%s on: %s", VERSION,
 			fmt.Sprintf("%s:%d", s.Config.Server.Addr, s.Config.Server.Port))
 		err := s.Echo.Start(fmt.Sprintf("%s:%d", s.Config.Server.Addr, s.Config.Server.Port))
-		if err != nil && err != http.ErrServerClosed {
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			s.Echo.Logger.Errorf("Failed to start up web service: %s", err)
 			os.Exit(1)
 		}
