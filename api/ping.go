@@ -1,8 +1,9 @@
 package api
 
 import (
-	"github.com/labstack/echo/v4"
 	"net/http"
+
+	"github.com/labstack/echo/v4"
 )
 
 // PingResponse reflects the JSON structure for a ping response

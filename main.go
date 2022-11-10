@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/ReneKroon/ttlcache/v2"
-	"github.com/wneessen/js-mailer/config"
-	"github.com/wneessen/js-mailer/server"
 	"os"
 	"time"
+
+	"github.com/jellydator/ttlcache/v2"
+	"github.com/wneessen/js-mailer/config"
+	"github.com/wneessen/js-mailer/server"
 )
 
 func main() {

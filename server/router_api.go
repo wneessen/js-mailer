@@ -4,8 +4,8 @@ import (
 	"github.com/wneessen/js-mailer/api"
 )
 
-// RouterApi registers the JSON API routes with echo
-func (s *Srv) RouterApi() {
+// RouterAPI registers the JSON API routes with echo
+func (s *Srv) RouterAPI() {
 	apiRoute := api.Route{
 		Cache:  s.Cache,
 		Config: s.Config,

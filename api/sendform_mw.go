@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
 
-	"github.com/ReneKroon/ttlcache/v2"
+	"github.com/jellydator/ttlcache/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/wneessen/js-mailer/form"
 	"github.com/wneessen/js-mailer/response"
@@ -18,7 +19,7 @@ import (
 
 // SendFormRequest reflects the structure of the send form request data
 type SendFormRequest struct {
-	FormId    string `param:"fid"`
+	FormID    string `param:"fid"`
 	FormObj   *form.Form
 	Token     string `param:"token"`
 	TokenResp *TokenResponse
@@ -56,21 +57,23 @@ func (r *Route) SendFormBindForm(next echo.HandlerFunc) echo.HandlerFunc {
 
 		// Let's retrieve the formObj from cache
 		cacheObj, err := r.Cache.Get(sr.Token)
-		if err == ttlcache.ErrNotFound {
-			return echo.NewHTTPError(http.StatusNotFound, "not a valid send URL")
-		}
-		if err != nil && err != ttlcache.ErrNotFound {
-			c.Logger().Errorf("failed to look up token in cache: %s", err)
-			return echo.NewHTTPError(http.StatusInternalServerError, &response.ErrorObj{
-				Message: "failed to look up token in cache",
-				Data:    err.Error(),
-			})
+		if err != nil {
+			switch {
+			case errors.Is(err, ttlcache.ErrNotFound):
+				return echo.NewHTTPError(http.StatusNotFound, "not a valid send URL")
+			case !errors.Is(err, ttlcache.ErrNotFound):
+				c.Logger().Errorf("failed to look up token in cache: %s", err)
+				return echo.NewHTTPError(http.StatusInternalServerError, &response.ErrorObj{
+					Message: "failed to look up token in cache",
+					Data:    err.Error(),
+				})
+			}
 		}
 		if cacheObj != nil {
 			TokenRespObj := cacheObj.(TokenResponse)
 			sr.TokenResp = &TokenRespObj
 		}
-		if sr.TokenResp != nil && sr.TokenResp.FormId != sr.FormId {
+		if sr.TokenResp != nil && sr.TokenResp.FormID != sr.FormID {
 			c.Logger().Warn("URL form id does not match the cached form object id")
 			return echo.NewHTTPError(http.StatusBadRequest, "invalid form id")
 		}
@@ -81,7 +84,7 @@ func (r *Route) SendFormBindForm(next echo.HandlerFunc) echo.HandlerFunc {
 		}()
 
 		// Let's try to read formobj from cache
-		formObj, err := r.GetForm(sr.FormId)
+		formObj, err := r.GetForm(sr.FormID)
 		if err != nil {
 			c.Logger().Errorf("failed get form object: %s", err)
 			return echo.NewHTTPError(http.StatusInternalServerError, "form lookup failed")
@@ -312,7 +315,7 @@ func (r *Route) SendFormCheckToken(next echo.HandlerFunc) echo.HandlerFunc {
 			return echo.NewHTTPError(http.StatusUnauthorized, "domain not allowed to access form")
 		}
 		tokenText := fmt.Sprintf("%s_%d_%d_%s_%s", reqOrigin, sr.TokenResp.CreateTime,
-			sr.TokenResp.ExpireTime, sr.FormObj.Id, sr.FormObj.Secret)
+			sr.TokenResp.ExpireTime, sr.FormObj.ID, sr.FormObj.Secret)
 		tokenSha := fmt.Sprintf("%x", sha256.Sum256([]byte(tokenText)))
 		if tokenSha != sr.Token {
 			c.Logger().Errorf("security token does not match")
