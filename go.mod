@@ -12,7 +12,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
-	github.com/wneessen/go-mail v0.3.4
+	github.com/wneessen/go-mail v0.3.5
 	golang.org/x/crypto v0.2.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
