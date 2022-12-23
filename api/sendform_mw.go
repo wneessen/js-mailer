@@ -38,11 +38,15 @@ type HcaptchaResponse CaptchaResponse
 // ReCaptchaResponse is the CaptchaResponse for Google ReCaptcha
 type ReCaptchaResponse CaptchaResponse
 
+// TurnstileResponse is the CaptchaResponse for Cloudflare Turnstile
+type TurnstileResponse CaptchaResponse
+
 // List of common errors
 const (
 	ErrNoValidObject           = "no valid form object found"
 	ErrHCaptchaValidateFailed  = "hCaptcha validation failed"
 	ErrReCaptchaVaildateFailed = "reCaptcha validation failed"
+	ErrTurnstileVaildateFailed = "Turnstile validation failed"
 )
 
 // SendFormBindForm is a middleware that validates the provided form data and binds
@@ -295,6 +299,58 @@ func (r *Route) SendFormRecaptcha(next echo.HandlerFunc) echo.HandlerFunc {
 
 			return echo.NewHTTPError(http.StatusBadRequest,
 				"reCaptcha challenge-response validation failed")
+		}
+
+		return next(c)
+	}
+}
+
+// SendFormTurnstile is a middleware that checks the form data against Cloudflare Turnstile
+func (r *Route) SendFormTurnstile(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		sr := c.Get("formobj").(*SendFormRequest)
+		if sr == nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, ErrNoValidObject)
+		}
+
+		if sr.FormObj.Validation.Turnstile.Enabled {
+			turnstileResponse := c.FormValue("cf-turnstile-response")
+			if turnstileResponse == "" {
+				return echo.NewHTTPError(http.StatusBadRequest, "missing Turnstile response")
+			}
+
+			// Create a HTTP request
+			postData := url.Values{
+				"response": {turnstileResponse},
+				"secret":   {sr.FormObj.Validation.Turnstile.SecretKey},
+			}
+			httpResp, err := http.PostForm("https://challenges.cloudflare.com/turnstile/v0/siteverify", postData)
+			if err != nil {
+				c.Logger().Errorf("failed to post HTTP request to Turnstile: %s", err)
+				return echo.NewHTTPError(http.StatusInternalServerError, ErrTurnstileVaildateFailed)
+			}
+
+			var respBody bytes.Buffer
+			_, err = respBody.ReadFrom(httpResp.Body)
+			if err != nil {
+				c.Logger().Errorf("reading HTTP response body failed: %s", err)
+				return echo.NewHTTPError(http.StatusInternalServerError, ErrTurnstileVaildateFailed)
+			}
+			if httpResp.StatusCode == http.StatusOK {
+				var turnstileResp ReCaptchaResponse
+				if err := json.Unmarshal(respBody.Bytes(), &turnstileResp); err != nil {
+					c.Logger().Errorf("HTTP response JSON unmarshalling failed: %s", err)
+					return echo.NewHTTPError(http.StatusInternalServerError, ErrTurnstileVaildateFailed)
+				}
+				if !turnstileResp.Success {
+					return echo.NewHTTPError(http.StatusBadRequest,
+						"Turnstile challenge-response validation failed")
+				}
+				return next(c)
+			}
+
+			return echo.NewHTTPError(http.StatusBadRequest,
+				"Turnstile challenge-response validation failed")
 		}
 
 		return next(c)

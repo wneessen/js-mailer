@@ -48,6 +48,10 @@ type Form struct {
 			Enabled   bool   `fig:"enabled"`
 			SecretKey string `fig:"secret_key"`
 		}
+		Turnstile struct {
+			Enabled   bool   `fig:"enabled"`
+			SecretKey string `fig:"secret_key"`
+		}
 	}
 }
 
