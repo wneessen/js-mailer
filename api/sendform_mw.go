@@ -49,6 +49,11 @@ const (
 	ErrTurnstileVaildateFailed = "Turnstile validation failed"
 )
 
+var (
+	ErrReadHTTPResponseBody = "reading HTTP response body: %s"
+	ErrJSONUnmarshal        = "HTTP response JSON unmarshalling: %s"
+)
+
 // SendFormBindForm is a middleware that validates the provided form data and binds
 // it to a SendFormRequest object
 func (r *Route) SendFormBindForm(next echo.HandlerFunc) echo.HandlerFunc {
@@ -229,13 +234,13 @@ func (r *Route) SendFormHcaptcha(next echo.HandlerFunc) echo.HandlerFunc {
 			var respBody bytes.Buffer
 			_, err = respBody.ReadFrom(httpResp.Body)
 			if err != nil {
-				c.Logger().Errorf("reading HTTP response body failed: %s", err)
+				c.Logger().Errorf(ErrReadHTTPResponseBody, err)
 				return echo.NewHTTPError(http.StatusInternalServerError, ErrHCaptchaValidateFailed)
 			}
 			if httpResp.StatusCode == http.StatusOK {
 				var hcapResp HcaptchaResponse
 				if err := json.Unmarshal(respBody.Bytes(), &hcapResp); err != nil {
-					c.Logger().Errorf("HTTP response JSON unmarshalling failed: %s", err)
+					c.Logger().Errorf(ErrJSONUnmarshal, err)
 					return echo.NewHTTPError(http.StatusInternalServerError, ErrHCaptchaValidateFailed)
 				}
 				if !hcapResp.Success {
@@ -281,13 +286,13 @@ func (r *Route) SendFormRecaptcha(next echo.HandlerFunc) echo.HandlerFunc {
 			var respBody bytes.Buffer
 			_, err = respBody.ReadFrom(httpResp.Body)
 			if err != nil {
-				c.Logger().Errorf("reading HTTP response body failed: %s", err)
+				c.Logger().Errorf(ErrReadHTTPResponseBody, err)
 				return echo.NewHTTPError(http.StatusInternalServerError, ErrReCaptchaVaildateFailed)
 			}
 			if httpResp.StatusCode == http.StatusOK {
 				var recapResp ReCaptchaResponse
 				if err := json.Unmarshal(respBody.Bytes(), &recapResp); err != nil {
-					c.Logger().Errorf("HTTP response JSON unmarshalling failed: %s", err)
+					c.Logger().Errorf(ErrJSONUnmarshal, err)
 					return echo.NewHTTPError(http.StatusInternalServerError, ErrReCaptchaVaildateFailed)
 				}
 				if !recapResp.Success {
@@ -334,13 +339,13 @@ func (r *Route) SendFormTurnstile(next echo.HandlerFunc) echo.HandlerFunc {
 			var respBody bytes.Buffer
 			_, err = respBody.ReadFrom(httpResp.Body)
 			if err != nil {
-				c.Logger().Errorf("reading HTTP response body failed: %s", err)
+				c.Logger().Errorf(ErrReadHTTPResponseBody, err)
 				return echo.NewHTTPError(http.StatusInternalServerError, ErrTurnstileVaildateFailed)
 			}
 			if httpResp.StatusCode == http.StatusOK {
 				var turnstileResp ReCaptchaResponse
 				if err := json.Unmarshal(respBody.Bytes(), &turnstileResp); err != nil {
-					c.Logger().Errorf("HTTP response JSON unmarshalling failed: %s", err)
+					c.Logger().Errorf(ErrJSONUnmarshal, err)
 					return echo.NewHTTPError(http.StatusInternalServerError, ErrTurnstileVaildateFailed)
 				}
 				if !turnstileResp.Success {
