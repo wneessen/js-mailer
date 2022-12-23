@@ -18,6 +18,7 @@ API that can be accessed via JavaScript `Fetch()` or `XMLHttpRequest`.
 * Per-form mail server configuration
 * hCaptcha support
 * reCaptcha v2 support
+* Turnstile support
 * Form field type validation (text, email, number, bool)
 * Confirmation mail to poster
 * Custom Reply-To header based on sending mail address
@@ -114,6 +115,10 @@ the JSON syntax of the form configuration is very simple, yet flexible.
       "enabled": true,
       "secret_key": "0x01234567890"
     },
+    "turnstile": {
+      "enabled": true,
+      "secret_key": "0x01234567890"
+    },
     "honeypot": "street",
     "fields": [
       {
@@ -165,6 +170,9 @@ the JSON syntax of the form configuration is very simple, yet flexible.
     * `recaptcha (type: struct)`: The struct for the forms reCaptcha configuration
         * `enabled (type: bool)`: Enable reCaptcha challenge-response validation
         * `secret_key (type: string)`: Your reCaptcha secret key
+    * `turnstile (type: struct)`: The struct for the forms Turnstile configuration
+      * `enabled (type: bool)`: Enable Turnstile challenge-response validation
+      * `secret_key (type: string)`: Your Turnstile secret key
     * `honeypot (type: string)`: Name of the honeypot field, that is expected to be empty (Anti-SPAM)
     * `fields (type: []struct)`: Array of single field validation configurations
         * `name (type: string)`: Field validation identifier
