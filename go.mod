@@ -11,5 +11,6 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/wneessen/go-mail v0.3.8
+	go.uber.org/goleak v1.2.1 // indirect
 	golang.org/x/sync v0.1.0 // indirect
 )
