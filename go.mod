@@ -7,7 +7,7 @@ require (
 	github.com/jellydator/ttlcache/v2 v2.11.1
 	github.com/kkyr/fig v0.3.2
 	github.com/labstack/echo/v4 v4.11.3
-	github.com/labstack/gommon v0.4.0
+	github.com/labstack/gommon v0.4.1
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/wneessen/go-mail v0.4.0
