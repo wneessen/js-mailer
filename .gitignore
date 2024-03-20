@@ -20,3 +20,5 @@ builds
 !builds/.gitkeep
 docker-images
 !docker-images/.gitkeep
+
+.idea
