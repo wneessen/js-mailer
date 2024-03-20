@@ -100,6 +100,6 @@ function showError(errorMsg) {
         return false
     }
     msgDiv.innerText = errorMsg
-    msgDiv.innerHTML = msgDiv.innerText + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>'
+    msgDiv.innerHTML = encodeURIComponent(msgDiv.innerText) + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>'
     msgDiv.style.display = 'block'
 }
