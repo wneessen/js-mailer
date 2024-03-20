@@ -3,6 +3,10 @@ on:
   push:
     branches:
       - main # or the name of your main branch
+
+# Declare default permissions as read only.
+permissions: read-all
+
 jobs:
   build:
     name: Build
