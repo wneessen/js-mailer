@@ -1,5 +1,5 @@
 ## Build first
-FROM golang:latest@sha256:83d3f5ddeb0687a6fe2ffad3c76397f5e4d0a30d35fc4a5262e28dd52e6f7d7d as builder
+FROM golang:latest@sha256:450e3822c7a135e1463cd83e51c8e2eb03b86a02113c89424e6f0f8344bb4168 as builder
 RUN mkdir /builddir
 ADD . /builddir/
 WORKDIR /builddir
