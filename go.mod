@@ -8,7 +8,7 @@ require (
 	github.com/kkyr/fig v0.4.0
 	github.com/labstack/echo/v4 v4.12.0
 	github.com/labstack/gommon v0.4.2
-	github.com/wneessen/go-mail v0.4.1
+	github.com/wneessen/go-mail v0.4.2
 )
 
 require (
