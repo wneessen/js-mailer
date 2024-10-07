@@ -2,6 +2,7 @@ package api
 
 import (
 	"github.com/jellydator/ttlcache/v2"
+
 	"github.com/wneessen/js-mailer/config"
 )
 

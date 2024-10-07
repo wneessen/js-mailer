@@ -6,6 +6,7 @@ import (
 
 	"github.com/cyphar/filepath-securejoin"
 	"github.com/kkyr/fig"
+
 	"github.com/wneessen/js-mailer/config"
 )
 

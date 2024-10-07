@@ -1,6 +1,6 @@
 module github.com/wneessen/js-mailer
 
-go 1.21
+go 1.23
 
 require (
 	github.com/cyphar/filepath-securejoin v0.3.3

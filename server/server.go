@@ -15,11 +15,12 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
+
 	"github.com/wneessen/js-mailer/config"
 )
 
 // VERSION is the global version string contstant
-const VERSION = "0.3.5"
+const VERSION = "0.3.6"
 
 // Srv represents the server object
 type Srv struct {
