@@ -6,13 +6,12 @@ require (
 	github.com/cyphar/filepath-securejoin v0.3.4
 	github.com/jellydator/ttlcache/v2 v2.11.1
 	github.com/kkyr/fig v0.4.0
-	github.com/labstack/echo/v4 v4.12.0
+	github.com/labstack/echo/v4 v4.13.0
 	github.com/labstack/gommon v0.4.2
 	github.com/wneessen/go-mail v0.5.2
 )
 
 require (
-	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
