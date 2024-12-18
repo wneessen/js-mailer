@@ -3,7 +3,7 @@ module github.com/wneessen/js-mailer
 go 1.23
 
 require (
-	github.com/cyphar/filepath-securejoin v0.3.5
+	github.com/cyphar/filepath-securejoin v0.3.6
 	github.com/jellydator/ttlcache/v2 v2.11.1
 	github.com/kkyr/fig v0.4.0
 	github.com/labstack/echo/v4 v4.13.2
