@@ -152,7 +152,7 @@ func GetMailClient(f *form.Form) (*mail.Client, error) {
 	}
 	mc, err := mail.NewClient(f.Server.Host, mail.WithPort(f.Server.Port),
 		mail.WithUsername(f.Server.Username), mail.WithPassword(f.Server.Password),
-		mail.WithSMTPAuth(mail.SMTPAuthPlain), mail.WithTimeout(serverTimeout))
+		mail.WithSMTPAuth(mail.SMTPAuthAutoDiscover), mail.WithTimeout(serverTimeout))
 	if err != nil {
 		return mc, err
 	}
