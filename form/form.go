@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/cyphar/filepath-securejoin"
 	"github.com/kkyr/fig"
 
 	"github.com/wneessen/js-mailer/config"
@@ -67,17 +66,16 @@ type ValidationField struct {
 // NewForm returns a new Form object to the caller. It fails with an error when
 // the form is question wasn't found or does not fulfill the syntax requirements
 func NewForm(c *config.Config, i string) (Form, error) {
-	formPath, err := securejoin.SecureJoin(c.Forms.Path, fmt.Sprintf("%s.json", i))
+	root, err := os.OpenRoot(c.Forms.Path)
 	if err != nil {
-		return Form{}, fmt.Errorf("failed to securely join forms path and form id")
+		return Form{}, fmt.Errorf("failed to open root of forms path: %w", err)
 	}
-	_, err = os.Stat(formPath)
+	_, err = root.Stat(fmt.Sprintf("%s.json", i))
 	if err != nil {
 		return Form{}, fmt.Errorf("failed to stat form config: %w", err)
 	}
 	var formObj Form
-	if err := fig.Load(&formObj, fig.File(fmt.Sprintf("%s.json", i)),
-		fig.Dirs(c.Forms.Path)); err != nil {
+	if err = fig.Load(&formObj, fig.File(fmt.Sprintf("%s.json", i)), fig.Dirs(c.Forms.Path)); err != nil {
 		return Form{}, fmt.Errorf("failed to read form config: %w", err)
 	}
 
