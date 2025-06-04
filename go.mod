@@ -4,7 +4,7 @@ go 1.24
 
 require (
 	github.com/jellydator/ttlcache/v2 v2.11.1
-	github.com/kkyr/fig v0.4.0
+	github.com/kkyr/fig v0.5.0
 	github.com/labstack/echo/v4 v4.13.4
 	github.com/labstack/gommon v0.4.2
 	github.com/wneessen/go-mail v0.6.2
