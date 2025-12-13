@@ -52,6 +52,12 @@ type Form struct {
 			Enabled   bool   `fig:"enabled"`
 			SecretKey string `fig:"secret_key"`
 		}
+		PrivateCaptcha struct {
+			Host    string `fig:"host"`
+			Enabled bool   `fig:"enabled"`
+			SiteKey string `fig:"site_key"`
+			APIKey  string `fig:"api_key"`
+		} `fig:"private_captcha"`
 	}
 }
 

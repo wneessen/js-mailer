@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
@@ -10,6 +11,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/jellydator/ttlcache/v2"
 	"github.com/labstack/echo/v4"
@@ -33,6 +35,13 @@ type CaptchaResponse struct {
 	Hostname           string `json:"hostname"`
 }
 
+type PrivateCaptchaResponse struct {
+	Success            bool   `json:"success"`
+	ChallengeTimestamp string `json:"timestamp"`
+	Origin             string `json:"origin"`
+	Code               int    `json:"code"`
+}
+
 // HcaptchaResponse is the CaptchaResponse for hCaptcha
 type HcaptchaResponse CaptchaResponse
 
@@ -44,10 +53,11 @@ type TurnstileResponse CaptchaResponse
 
 // List of common errors
 const (
-	ErrNoValidObject           = "no valid form object found"
-	ErrHCaptchaValidateFailed  = "hCaptcha validation failed"
-	ErrReCaptchaVaildateFailed = "reCaptcha validation failed"
-	ErrTurnstileVaildateFailed = "Turnstile validation failed"
+	ErrNoValidObject                = "no valid form object found"
+	ErrHCaptchaValidateFailed       = "hCaptcha validation failed"
+	ErrReCaptchaVaildateFailed      = "reCaptcha validation failed"
+	ErrTurnstileVaildateFailed      = "Turnstile validation failed"
+	ErrPrivateCaptureVaildateFailed = "Private Capture validation failed"
 )
 
 var (
@@ -358,6 +368,72 @@ func (r *Route) SendFormTurnstile(next echo.HandlerFunc) echo.HandlerFunc {
 
 			return echo.NewHTTPError(http.StatusBadRequest,
 				"Turnstile challenge-response validation failed")
+		}
+
+		return next(c)
+	}
+}
+
+// SendFormPrivateCaptcha is a middleware that checks the form data against Private Captcha
+func (r *Route) SendFormPrivateCaptcha(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		sr := c.Get("formobj").(*SendFormRequest)
+		if sr == nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, ErrNoValidObject)
+		}
+
+		if sr.FormObj.Validation.PrivateCaptcha.Enabled {
+			captchaSolution := c.FormValue("private-captcha-solution")
+			if captchaSolution == "" {
+				return echo.NewHTTPError(http.StatusBadRequest, "missing Private Captcha response")
+			}
+
+			// Prepare URL and query parameters
+			endpoint := fmt.Sprintf("https://%s/verify", sr.FormObj.Validation.PrivateCaptcha.Host)
+			reqURL, err := url.Parse(endpoint)
+			if err != nil {
+				return echo.NewHTTPError(http.StatusInternalServerError, "failed to parse server url: "+err.Error())
+			}
+
+			// Prepare HTTP request
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+			defer cancel()
+			body := strings.NewReader(captchaSolution)
+			request, err := http.NewRequestWithContext(ctx, http.MethodPost, reqURL.String(), body)
+			if err != nil {
+				return echo.NewHTTPError(http.StatusInternalServerError, "failed to create HTTP request: "+err.Error())
+			}
+			request.Header.Set("X-Api-Key", sr.FormObj.Validation.PrivateCaptcha.APIKey)
+
+			// Create a HTTP request
+			client := http.DefaultClient
+			res, err := client.Do(request)
+			if err != nil {
+				c.Logger().Errorf("failed to post HTTP request to Private Captchs: %s", err)
+				return echo.NewHTTPError(http.StatusInternalServerError, ErrTurnstileVaildateFailed)
+			}
+
+			var respBody bytes.Buffer
+			_, err = respBody.ReadFrom(res.Body)
+			if err != nil {
+				c.Logger().Errorf(ErrReadHTTPResponseBody, err)
+				return echo.NewHTTPError(http.StatusInternalServerError, ErrTurnstileVaildateFailed)
+			}
+			if res.StatusCode == http.StatusOK {
+				var captchaResponse PrivateCaptchaResponse
+				if err = json.Unmarshal(respBody.Bytes(), &captchaResponse); err != nil {
+					c.Logger().Errorf(ErrJSONUnmarshal, err)
+					return echo.NewHTTPError(http.StatusInternalServerError, ErrPrivateCaptureVaildateFailed)
+				}
+				if !captchaResponse.Success {
+					return echo.NewHTTPError(http.StatusBadRequest,
+						"Private Captcha challenge-response validation failed")
+				}
+				return next(c)
+			}
+
+			return echo.NewHTTPError(http.StatusBadRequest,
+				"Private Captcha challenge-response validation failed")
 		}
 
 		return next(c)
