@@ -3,6 +3,9 @@ module github.com/wneessen/js-mailer
 go 1.25.1
 
 require (
+	github.com/go-chi/chi/v5 v5.2.3
+	github.com/go-chi/httplog/v3 v3.3.0
+	github.com/go-chi/render v1.0.3
 	github.com/jellydator/ttlcache/v2 v2.11.1
 	github.com/kkyr/fig v0.5.0
 	github.com/labstack/echo/v4 v4.14.0
@@ -11,6 +14,7 @@ require (
 )
 
 require (
+	github.com/ajg/form v1.5.1 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
