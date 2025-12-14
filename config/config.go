@@ -15,13 +15,13 @@ type Config struct {
 	Loglevel string `fig:"loglevel" default:"debug"`
 	Forms    struct {
 		Path string `fig:"path" validate:"required"`
-	}
+	} `fig:"forms"`
 	Server struct {
 		Addr         string        `fig:"bind_addr"`
 		Port         uint32        `fig:"port" default:"8765"`
 		Timeout      time.Duration `fig:"timeout" default:"15s"`
 		RequestLimit string        `fig:"request_limit" default:"10M"`
-	}
+	} `fig:"server"`
 }
 
 // NewConfig returns a new Config object and fails if the configuration was not found or

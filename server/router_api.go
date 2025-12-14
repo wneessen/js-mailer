@@ -19,5 +19,5 @@ func (s *Srv) RouterAPI() {
 	ag.Add("POST", "/send/:fid/:token", apiRoute.SendForm,
 		apiRoute.SendFormBindForm, apiRoute.SendFormReqFields, apiRoute.SendFormHoneypot,
 		apiRoute.SendFormHcaptcha, apiRoute.SendFormRecaptcha, apiRoute.SendFormTurnstile,
-		apiRoute.SendFormCheckToken)
+		apiRoute.SendFormPrivateCaptcha, apiRoute.SendFormCheckToken)
 }
