@@ -14,11 +14,10 @@
 # Dependency directories (remove the comment below to include it)
 # vendor/
 
-js-mailer
-!etc/js-mailer
 builds
 !builds/.gitkeep
 docker-images
 !docker-images/.gitkeep
 
 .idea
+tmp
