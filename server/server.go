@@ -9,14 +9,13 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/wneessen/js-mailer/internal/config"
 	"github.com/wneessen/js-mailer/response"
 
 	"github.com/jellydator/ttlcache/v2"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
-
-	"github.com/wneessen/js-mailer/config"
 )
 
 // VERSION is the global version string contstant
