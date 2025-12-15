@@ -7,10 +7,12 @@ package cache
 import (
 	"sync"
 	"time"
+
+	"github.com/wneessen/js-mailer/internal/forms"
 )
 
 type item struct {
-	value      any
+	form       *forms.Form
 	expiration time.Time
 }
 
@@ -33,14 +35,14 @@ func New(cleanupInterval time.Duration) *Cache {
 }
 
 // Set stores a value without TTL.
-func (c *Cache) Set(key string, value any) {
+func (c *Cache) Set(key string, form *forms.Form) {
 	c.mu.Lock()
-	c.items[key] = &item{value: value, expiration: time.Now().Add(c.ttl)}
+	c.items[key] = &item{form: form, expiration: time.Now().Add(c.ttl)}
 	c.mu.Unlock()
 }
 
 // Get retrieves a value. Second return value indicates presence.
-func (c *Cache) Get(key string) (any, bool) {
+func (c *Cache) Get(key string) (*forms.Form, bool) {
 	c.mu.RLock()
 	cacheItem, ok := c.items[key]
 	c.mu.RUnlock()
@@ -56,7 +58,7 @@ func (c *Cache) Get(key string) (any, bool) {
 		return nil, false
 	}
 
-	return cacheItem.value, true
+	return cacheItem.form, true
 }
 
 // Stop shuts down the cleanup goroutine.
