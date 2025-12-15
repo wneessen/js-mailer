@@ -33,11 +33,29 @@ func ErrInvalidRequest(err error) render.Renderer {
 	}
 }
 
-func ErrUnauthorized(err error) render.Renderer {
+func ErrForbidden(err error) render.Renderer {
 	return &ErrResponse{
 		Err:            err,
-		HTTPStatusCode: http.StatusUnauthorized,
-		StatusText:     http.StatusText(http.StatusUnauthorized),
+		HTTPStatusCode: http.StatusForbidden,
+		StatusText:     http.StatusText(http.StatusForbidden),
+		ErrorText:      err.Error(),
+	}
+}
+
+func ErrNotFound(err error) render.Renderer {
+	return &ErrResponse{
+		Err:            err,
+		HTTPStatusCode: http.StatusNotFound,
+		StatusText:     http.StatusText(http.StatusNotFound),
+		ErrorText:      err.Error(),
+	}
+}
+
+func ErrUnexpected(err error) render.Renderer {
+	return &ErrResponse{
+		Err:            err,
+		HTTPStatusCode: http.StatusInternalServerError,
+		StatusText:     http.StatusText(http.StatusInternalServerError),
 		ErrorText:      err.Error(),
 	}
 }
