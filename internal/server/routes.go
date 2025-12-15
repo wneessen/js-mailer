@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/httplog/v3"
 )
@@ -43,7 +44,15 @@ func (s *Server) routes(_ context.Context) error {
 
 	// Register routes
 	s.mux.Get("/ping", s.HandlerAPIPingGet)
-	s.mux.Post("/token", s.HandlerAPITokenPost)
+
+	// Preflight check routes
+	s.mux.With(s.preflightCheck).Route("/", func(r chi.Router) {
+		r.Get("/token/{formID}", s.HandlerAPITokenGet)
+		r.Options("/token/{formID}", s.HandlerAPITokenGet)
+
+		r.Post("/send/{formID}/{hash}", s.HandlerAPISendFormPost)
+		r.Options("/send/{formID}/{hash}", s.HandlerAPISendFormPost)
+	})
 
 	return nil
 }
