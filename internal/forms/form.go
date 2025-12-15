@@ -48,7 +48,7 @@ type Form struct {
 			Enabled   bool   `fig:"enabled"`
 			SecretKey string `fig:"secret_key"`
 		}
-		Honeypot  *string `fig:"honeypot"`
+		Honeypot  string `fig:"honeypot"`
 		Recaptcha struct {
 			Enabled   bool   `fig:"enabled"`
 			SecretKey string `fig:"secret_key"`
