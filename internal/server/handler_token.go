@@ -91,7 +91,7 @@ func (s *Server) HandlerAPITokenGet(w http.ResponseWriter, r *http.Request) {
 		Encoding:  encodingMPFormData,
 		ReqMethod: http.MethodPost,
 	}
-	s.cache.Set(hash, form)
+	s.cache.Set(hash, form, now, expire)
 
 	resp := NewResponse(http.StatusCreated, "sender token successfully created", token)
 	if renderErr := render.Render(w, r, resp); renderErr != nil {

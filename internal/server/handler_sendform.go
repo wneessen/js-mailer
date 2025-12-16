@@ -5,6 +5,9 @@
 package server
 
 import (
+	"crypto/sha256"
+	"crypto/subtle"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -12,6 +15,7 @@ import (
 	"net/mail"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
@@ -36,12 +40,36 @@ func (s *Server) HandlerAPISendFormPost(w http.ResponseWriter, r *http.Request) 
 		_ = render.Render(w, r, ErrInvalidRequest(ErrMissingFormIDOrHash))
 		return
 	}
+	providedHash, err := hex.DecodeString(hash)
+	if err != nil {
+		s.log.Error("failed to decode provided form token hash", logger.Err(err))
+		_ = render.Render(w, r, ErrInvalidRequest(ErrInvalidFormIDOrToken))
+		return
+	}
+	if len(providedHash) != sha256.Size {
+		s.log.Error("invalid form token hash length", slog.Int("length", len(providedHash)))
+		_ = render.Render(w, r, ErrInvalidRequest(ErrInvalidFormIDOrToken))
+		return
+	}
 
 	// Make sure the form exists and is valid
-	form, err := s.formFromCache(formID, hash)
+	defer s.cache.Remove(hash)
+	form, tokenCreatedAt, tokenExpiresAt, err := s.formFromCache(formID, hash)
 	if err != nil {
 		s.log.Error("failed to validate requested form", logger.Err(err), slog.String("formID", formID),
 			slog.String("hash", hash))
+		_ = render.Render(w, r, ErrNotFound(ErrInvalidFormIDOrToken))
+		return
+	}
+
+	// Validate the token
+	hasher := sha256.New()
+	value := fmt.Sprintf("%s_%d_%d_%s_%s", r.Header.Get("origin"), tokenCreatedAt.UnixNano(),
+		tokenExpiresAt.UnixNano(), form.ID, form.Secret)
+	hasher.Write([]byte(value))
+	computedHash := hasher.Sum(nil)
+	if subtle.ConstantTimeCompare(computedHash, providedHash) != 1 {
+		s.log.Error("invalid form token", slog.String("formID", formID), slog.String("hash", hash))
 		_ = render.Render(w, r, ErrNotFound(ErrInvalidFormIDOrToken))
 		return
 	}
@@ -79,19 +107,21 @@ func (s *Server) HandlerAPISendFormPost(w http.ResponseWriter, r *http.Request) 
 
 }
 
-func (s *Server) formFromCache(formID, hash string) (*forms.Form, error) {
-	form, ok := s.cache.Get(hash)
+// formFromCache returns the form configuration from the cache.
+func (s *Server) formFromCache(formID, hash string) (*forms.Form, time.Time, time.Time, error) {
+	form, createdAt, expiresAt, ok := s.cache.Get(hash)
 	if !ok || form == nil {
-		return nil, errors.New("form config not found in cache")
+		return nil, createdAt, expiresAt, errors.New("form config not found in cache")
 	}
 
 	if !strings.EqualFold(formID, form.ID) {
-		return nil, errors.New("provided form id does not match the form config")
+		return nil, createdAt, expiresAt, errors.New("provided form id does not match the form config")
 	}
 
-	return form, nil
+	return form, createdAt, expiresAt, nil
 }
 
+// failsHoneypot checks if the submitted values fail the honeypot validation.
 func (s *Server) failsHoneypot(honeyField string, values map[string][]string) bool {
 	for key, val := range values {
 		if strings.EqualFold(key, honeyField) && len(val) > 0 {
@@ -105,6 +135,7 @@ func (s *Server) failsHoneypot(honeyField string, values map[string][]string) bo
 	return false
 }
 
+// failsRequiredFields checks if the submitted values fail the required field validation.
 func (s *Server) failsRequiredFields(validations []forms.ValidationField, submission map[string][]string) (bool, map[string]string) {
 	invalidFields := make(map[string]string)
 
