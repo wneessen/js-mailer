@@ -19,11 +19,16 @@ import (
 const (
 	privateCaptchaSolutionField = "private-captcha-solution"
 	hCaptchaSolutionField       = "h-captcha-response"
+	turnstileSolutionField      = "cf-turnstile-response"
+
+	hCpatchaEndpoint  = "https://hcaptcha.com/siteverify"
+	turnstileEndpoint = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
 )
 
 var (
 	ErrPrivateCaptchaFailed = errors.New("private captcha validation failed")
 	ErrHCaptchaFailed       = errors.New("hCaptcha validation failed")
+	ErrTurnstileFailed      = errors.New("turnstile validation failed")
 )
 
 func (s *Server) validateCaptcha(ctx context.Context, form *forms.Form, submission map[string][]string, remoteAddr string) error {
@@ -32,6 +37,7 @@ func (s *Server) validateCaptcha(ctx context.Context, form *forms.Form, submissi
 		if err := s.privateCaptcha(ctx, form, submission); err != nil {
 			return fmt.Errorf("private captcha validation failed: %w", err)
 		}
+		s.log.Debug("private captcha validation succeeded")
 	}
 
 	// HCaptcha
@@ -39,6 +45,15 @@ func (s *Server) validateCaptcha(ctx context.Context, form *forms.Form, submissi
 		if err := s.hCaptcha(ctx, form, submission, remoteAddr); err != nil {
 			return fmt.Errorf("hCaptcha validation failed: %w", err)
 		}
+		s.log.Debug("hCaptcha validation succeeded")
+	}
+
+	// Cloudflare Turnstile
+	if form.Validation.Turnstile.Enabled {
+		if err := s.turnstile(ctx, form, submission, remoteAddr); err != nil {
+			return fmt.Errorf("turnstile validation failed: %w", err)
+		}
+		s.log.Debug("turnstile validation succeeded")
 	}
 
 	return nil
@@ -99,7 +114,7 @@ func (s *Server) hCaptcha(ctx context.Context, form *forms.Form, submission map[
 		return fmt.Errorf("missing hCaptcha solution")
 	}
 
-	endpoint := "https://hcaptcha.com/siteverify"
+	endpoint := hCpatchaEndpoint
 	data := url.Values{}
 	data.Set("secret", form.Validation.Hcaptcha.SecretKey)
 	data.Set("remoteip", remoteAddr)
@@ -113,13 +128,57 @@ func (s *Server) hCaptcha(ctx context.Context, form *forms.Form, submission map[
 		return fmt.Errorf("failed to verify hCaptcha solution: %w", err)
 	}
 	if code != http.StatusOK {
-		s.log.Error("private captcha solution verification failed", slog.Int("status_code", code))
+		s.log.Error("hCaptcha solution verification failed", slog.Int("status_code", code))
 		return ErrHCaptchaFailed
 	}
 
 	if !res.Success {
 		s.log.Error("hCaptcha solution verification failed", slog.Any("response", res))
 		return ErrHCaptchaFailed
+	}
+
+	return nil
+}
+
+func (s *Server) turnstile(ctx context.Context, form *forms.Form, submission map[string][]string, remoteAddr string) error {
+	type response struct {
+		Success    bool     `json:"success"`
+		Timestamp  string   `json:"challenge_ts"`
+		Hostname   string   `json:"hostname"`
+		ErrorCodes []string `json:"error-codes"`
+		Action     string   `json:"action"`
+		CustomData string   `json:"cdata"` // Custom data payload from client-side
+		Metadata   struct {
+			EphemeralID string `json:"ephemeral_id"` // Device fingerprint ID (Enterprise only)
+		}
+	}
+
+	solution, ok := submission[turnstileSolutionField]
+	if !ok || len(solution) == 0 {
+		return fmt.Errorf("missing turnstile solution")
+	}
+
+	endpoint := turnstileEndpoint
+	data := url.Values{}
+	data.Set("response", solution[0])
+	data.Set("remoteip", remoteAddr)
+	data.Set("secret", form.Validation.Turnstile.SecretKey)
+
+	res := new(response)
+	body := strings.NewReader(data.Encode())
+	header := map[string]string{"Content-Type": "application/x-www-form-urlencoded"}
+	code, err := s.httpClient.Post(ctx, endpoint, res, body, header)
+	if err != nil {
+		return fmt.Errorf("failed to verify turnstile solution: %w", err)
+	}
+	if code != http.StatusOK {
+		s.log.Error("turnstile solution verification failed", slog.Int("status_code", code))
+		return ErrTurnstileFailed
+	}
+
+	if !res.Success {
+		s.log.Error("turnstile solution verification failed", slog.Any("response", res))
+		return ErrTurnstileFailed
 	}
 
 	return nil
