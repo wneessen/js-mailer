@@ -20,15 +20,18 @@ const (
 	privateCaptchaSolutionField = "private-captcha-solution"
 	hCaptchaSolutionField       = "h-captcha-response"
 	turnstileSolutionField      = "cf-turnstile-response"
+	reCaptchaSolutionField      = "g-recaptcha-response"
 
 	hCpatchaEndpoint  = "https://hcaptcha.com/siteverify"
 	turnstileEndpoint = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
+	reCaptchaEndpoint = "https://www.google.com/recaptcha/api/siteverify"
 )
 
 var (
 	ErrPrivateCaptchaFailed = errors.New("private captcha validation failed")
 	ErrHCaptchaFailed       = errors.New("hCaptcha validation failed")
 	ErrTurnstileFailed      = errors.New("turnstile validation failed")
+	ErrReCaptchaFailed      = errors.New("reCaptcha validation failed")
 )
 
 func (s *Server) validateCaptcha(ctx context.Context, form *forms.Form, submission map[string][]string, remoteAddr string) error {
@@ -54,6 +57,14 @@ func (s *Server) validateCaptcha(ctx context.Context, form *forms.Form, submissi
 			return fmt.Errorf("turnstile validation failed: %w", err)
 		}
 		s.log.Debug("turnstile validation succeeded")
+	}
+
+	// reCaptcha
+	if form.Validation.Recaptcha.Enabled {
+		if err := s.reCaptcha(ctx, form, submission, remoteAddr); err != nil {
+			return fmt.Errorf("reCaptcha validation failed: %w", err)
+		}
+		s.log.Debug("reCaptcha validation succeeded")
 	}
 
 	return nil
@@ -179,6 +190,45 @@ func (s *Server) turnstile(ctx context.Context, form *forms.Form, submission map
 	if !res.Success {
 		s.log.Error("turnstile solution verification failed", slog.Any("response", res))
 		return ErrTurnstileFailed
+	}
+
+	return nil
+}
+
+func (s *Server) reCaptcha(ctx context.Context, form *forms.Form, submission map[string][]string, remoteAddr string) error {
+	type response struct {
+		Success    bool     `json:"success"`
+		Timestamp  string   `json:"challenge_ts"`
+		Hostname   string   `json:"hostname"`
+		ErrorCodes []string `json:"error-codes"`
+	}
+
+	solution, ok := submission[reCaptchaSolutionField]
+	if !ok || len(solution) == 0 {
+		return fmt.Errorf("missing reCaptcha solution")
+	}
+
+	endpoint := reCaptchaEndpoint
+	data := url.Values{}
+	data.Set("secret", form.Validation.Recaptcha.SecretKey)
+	data.Set("response", solution[0])
+	data.Set("remoteip", remoteAddr)
+
+	res := new(response)
+	body := strings.NewReader(data.Encode())
+	header := map[string]string{"Content-Type": "application/x-www-form-urlencoded"}
+	code, err := s.httpClient.Post(ctx, endpoint, res, body, header)
+	if err != nil {
+		return fmt.Errorf("failed to verify reCaptcha solution: %w", err)
+	}
+	if code != http.StatusOK {
+		s.log.Error("reCaptcha solution verification failed", slog.Int("status_code", code))
+		return ErrReCaptchaFailed
+	}
+
+	if !res.Success {
+		s.log.Error("reCaptcha solution verification failed", slog.Any("response", res))
+		return ErrReCaptchaFailed
 	}
 
 	return nil
