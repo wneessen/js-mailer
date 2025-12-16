@@ -18,19 +18,27 @@ import (
 
 const (
 	privateCaptchaSolutionField = "private-captcha-solution"
+	hCaptchaSolutionField       = "h-captcha-response"
 )
 
 var (
 	ErrPrivateCaptchaFailed = errors.New("private captcha validation failed")
+	ErrHCaptchaFailed       = errors.New("hCaptcha validation failed")
 )
 
-func (s *Server) validateCaptcha(ctx context.Context, form *forms.Form, submission map[string][]string) error {
+func (s *Server) validateCaptcha(ctx context.Context, form *forms.Form, submission map[string][]string, remoteAddr string) error {
 	// Private Captcha
 	if form.Validation.PrivateCaptcha.Enabled {
 		if err := s.privateCaptcha(ctx, form, submission); err != nil {
 			return fmt.Errorf("private captcha validation failed: %w", err)
 		}
+	}
 
+	// HCaptcha
+	if form.Validation.Hcaptcha.Enabled {
+		if err := s.hCaptcha(ctx, form, submission, remoteAddr); err != nil {
+			return fmt.Errorf("hCaptcha validation failed: %w", err)
+		}
 	}
 
 	return nil
@@ -70,6 +78,48 @@ func (s *Server) privateCaptcha(ctx context.Context, form *forms.Form, submissio
 	if !res.Success {
 		s.log.Error("private captcha solution verification failed", slog.Any("response", res))
 		return ErrPrivateCaptchaFailed
+	}
+
+	return nil
+}
+
+func (s *Server) hCaptcha(ctx context.Context, form *forms.Form, submission map[string][]string, remoteAddr string) error {
+	type response struct {
+		Success     bool     `json:"success"`
+		Timestamp   string   `json:"challenge_ts"`
+		Hostname    string   `json:"hostname"`
+		Credit      bool     `json:"credit"`
+		ErrorCodes  []string `json:"error-codes"`
+		Score       float64  `json:"score"`
+		ScoreReason []string `json:"score_reason"`
+	}
+
+	solution, ok := submission[hCaptchaSolutionField]
+	if !ok || len(solution) == 0 {
+		return fmt.Errorf("missing hCaptcha solution")
+	}
+
+	endpoint := "https://hcaptcha.com/siteverify"
+	data := url.Values{}
+	data.Set("secret", form.Validation.Hcaptcha.SecretKey)
+	data.Set("remoteip", remoteAddr)
+	data.Set("response", solution[0])
+
+	res := new(response)
+	body := strings.NewReader(data.Encode())
+	header := map[string]string{"Content-Type": "application/x-www-form-urlencoded"}
+	code, err := s.httpClient.Post(ctx, endpoint, res, body, header)
+	if err != nil {
+		return fmt.Errorf("failed to verify hCaptcha solution: %w", err)
+	}
+	if code != http.StatusOK {
+		s.log.Error("private captcha solution verification failed", slog.Int("status_code", code))
+		return ErrHCaptchaFailed
+	}
+
+	if !res.Success {
+		s.log.Error("hCaptcha solution verification failed", slog.Any("response", res))
+		return ErrHCaptchaFailed
 	}
 
 	return nil

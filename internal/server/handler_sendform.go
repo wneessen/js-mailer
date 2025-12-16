@@ -107,7 +107,7 @@ func (s *Server) HandlerAPISendFormPost(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Check form submission against the configured captcha provider
-	if err = s.validateCaptcha(r.Context(), form, r.MultipartForm.Value); err != nil {
+	if err = s.validateCaptcha(r.Context(), form, r.MultipartForm.Value, r.RemoteAddr); err != nil {
 		s.log.Error("captcha validation failed", logger.Err(err))
 		_ = render.Render(w, r, ErrNotFound(ErrCaptchaValidationFailed))
 		return
