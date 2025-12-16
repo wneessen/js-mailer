@@ -12,8 +12,10 @@ import (
 )
 
 type item struct {
-	form       *forms.Form
-	expiration time.Time
+	form           *forms.Form
+	tokenCreatedAt time.Time
+	tokenExpiresAt time.Time
+	expiration     time.Time
 }
 
 type Cache struct {
@@ -35,30 +37,41 @@ func New(cleanupInterval time.Duration) *Cache {
 }
 
 // Set stores a value without TTL.
-func (c *Cache) Set(key string, form *forms.Form) {
+func (c *Cache) Set(key string, form *forms.Form, createdAt, expiresAt time.Time) {
 	c.mu.Lock()
-	c.items[key] = &item{form: form, expiration: time.Now().Add(c.ttl)}
+	c.items[key] = &item{
+		form:           form,
+		tokenCreatedAt: createdAt,
+		tokenExpiresAt: expiresAt,
+		expiration:     time.Now().Add(c.ttl),
+	}
 	c.mu.Unlock()
 }
 
 // Get retrieves a value. Second return value indicates presence.
-func (c *Cache) Get(key string) (*forms.Form, bool) {
+func (c *Cache) Get(key string) (*forms.Form, time.Time, time.Time, bool) {
 	c.mu.RLock()
 	cacheItem, ok := c.items[key]
 	c.mu.RUnlock()
 
 	if !ok {
-		return nil, false
+		return nil, time.Time{}, time.Time{}, false
 	}
 
 	if !cacheItem.expiration.IsZero() && time.Now().After(cacheItem.expiration) {
 		c.mu.Lock()
 		delete(c.items, key)
 		c.mu.Unlock()
-		return nil, false
+		return nil, time.Time{}, time.Time{}, false
 	}
 
-	return cacheItem.form, true
+	return cacheItem.form, cacheItem.tokenCreatedAt, cacheItem.tokenExpiresAt, true
+}
+
+func (c *Cache) Remove(key string) {
+	c.mu.Lock()
+	delete(c.items, key)
+	c.mu.Unlock()
 }
 
 // Stop shuts down the cleanup goroutine.
