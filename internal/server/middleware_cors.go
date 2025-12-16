@@ -18,7 +18,7 @@ const AccessControlMaxAge = "600"
 
 func (s *Server) preflightCheck(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodOptions ||
+		if (r.Method != http.MethodOptions && r.Method != http.MethodPost) ||
 			r.Header.Get("Origin") == "" ||
 			r.Header.Get("Access-Control-Request-Method") == "" {
 

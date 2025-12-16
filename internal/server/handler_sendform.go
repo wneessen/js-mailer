@@ -24,6 +24,14 @@ import (
 	"github.com/wneessen/js-mailer/internal/logger"
 )
 
+// SendResponse is the JSON response struct for the send endpoint
+type SendResponse struct {
+	FormID               string `json:"form_id"`
+	SentAt               int64  `json:"sent_at"`
+	ConfirmationResponse string `json:"confirmation_response"`
+	MessageResponse      string `json:"message_response"`
+}
+
 const formMaxMemory = 32 << 20
 
 var (
@@ -111,6 +119,27 @@ func (s *Server) HandlerAPISendFormPost(w http.ResponseWriter, r *http.Request) 
 		s.log.Error("captcha validation failed", logger.Err(err))
 		_ = render.Render(w, r, ErrNotFound(ErrCaptchaValidationFailed))
 		return
+	}
+
+	// Compose and deliver the actual form mail
+	now := time.Now()
+	confirmationResponse, messageResponse, err := s.sendMail(r, form)
+	if err != nil {
+		s.log.Error("failed to send form mail", logger.Err(err))
+		_ = render.Render(w, r, ErrUnexpected(err))
+		return
+	}
+
+	sendRes := &SendResponse{
+		FormID:               form.ID,
+		SentAt:               now.Unix(),
+		ConfirmationResponse: confirmationResponse,
+		MessageResponse:      messageResponse,
+	}
+
+	resp := NewResponse(http.StatusOK, "form mail successfully delivered", sendRes)
+	if renderErr := render.Render(w, r, resp); renderErr != nil {
+		s.log.Error("failed to render SendResponse", logger.Err(renderErr))
 	}
 }
 
