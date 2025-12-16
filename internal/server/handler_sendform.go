@@ -31,6 +31,7 @@ var (
 	ErrInvalidFormIDOrToken           = errors.New("invalid form ID or token")
 	ErrFailedToParseForm              = fmt.Errorf("failed to parse form submission")
 	ErrRequiredFieldsValidationFailed = errors.New("required fields validation failed")
+	ErrCaptchaValidationFailed        = errors.New("captcha validation failed")
 )
 
 func (s *Server) HandlerAPISendFormPost(w http.ResponseWriter, r *http.Request) {
@@ -105,6 +106,12 @@ func (s *Server) HandlerAPISendFormPost(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
+	// Check form submission against the configured captcha provider
+	if err = s.validateCaptcha(r.Context(), form, r.MultipartForm.Value); err != nil {
+		s.log.Error("captcha validation failed", logger.Err(err))
+		_ = render.Render(w, r, ErrNotFound(ErrCaptchaValidationFailed))
+		return
+	}
 }
 
 // formFromCache returns the form configuration from the cache.

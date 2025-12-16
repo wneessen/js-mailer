@@ -58,10 +58,14 @@ func New(logger *logger.Logger) *Client {
 	return &Client{httpClient, logger}
 }
 
-// Get performs a HTTP GET request for the given URL and json-unmarshals the response
-// into target
+// Get performs a HTTP GET request for the given URL and json-unmarshals the response into target
 func (h *Client) Get(ctx context.Context, endpoint string, target any, query url.Values, headers map[string]string) (int, error) {
 	return h.PerformReq(ctx, http.MethodGet, endpoint, target, query, headers, nil, DefaultTimeout)
+}
+
+// Post performs a HTTP POST request for the given URL and json-unmarshals the response into target
+func (h *Client) Post(ctx context.Context, endpoint string, target any, body io.Reader, headers map[string]string) (int, error) {
+	return h.PerformReq(ctx, http.MethodPost, endpoint, target, nil, headers, body, DefaultTimeout)
 }
 
 // PerformReq performs a HTTP GET or POST request for the given URL and timeout and JSON-unmarshals the
