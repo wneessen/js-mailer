@@ -40,14 +40,14 @@ type TokenResponse struct {
 func (s *Server) HandlerAPITokenGet(w http.ResponseWriter, r *http.Request) {
 	formID := chi.URLParam(r, "formID")
 	if formID == "" {
-		_ = render.Render(w, r, ErrInvalidRequest(fmt.Errorf("missing form ID")))
+		_ = render.Render(w, r, ErrBadRequest(fmt.Errorf("missing form ID")))
 		return
 	}
 
 	// Get the form configuration
 	form, err := forms.New(s.config.Forms.Path, formID)
 	if err != nil {
-		_ = render.Render(w, r, ErrInvalidRequest(err))
+		_ = render.Render(w, r, ErrBadRequest(err))
 		return
 	}
 

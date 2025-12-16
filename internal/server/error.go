@@ -6,6 +6,7 @@ package server
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/render"
 )
@@ -14,9 +15,9 @@ type ErrResponse struct {
 	Err            error `json:"-"` // low-level runtime error
 	HTTPStatusCode int   `json:"-"` // http response status code
 
-	StatusText string `json:"status"`          // user-level status message
-	AppCode    int64  `json:"code,omitempty"`  // application-specific error code
-	ErrorText  string `json:"error,omitempty"` // application-level error message, for debugging
+	StatusText string   `json:"status"`           // user-level status message
+	AppCode    int64    `json:"code,omitempty"`   // application-specific error code
+	ErrorText  []string `json:"errors,omitempty"` // application-level error message, for debugging
 }
 
 func (e *ErrResponse) Render(_ http.ResponseWriter, r *http.Request) error {
@@ -24,38 +25,32 @@ func (e *ErrResponse) Render(_ http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func ErrInvalidRequest(err error) render.Renderer {
-	return &ErrResponse{
-		Err:            err,
-		HTTPStatusCode: http.StatusBadRequest,
-		StatusText:     http.StatusText(http.StatusBadRequest),
-		ErrorText:      err.Error(),
-	}
+func ErrBadRequest(err error) render.Renderer {
+	return jsonError(http.StatusBadRequest, err)
 }
 
 func ErrForbidden(err error) render.Renderer {
-	return &ErrResponse{
-		Err:            err,
-		HTTPStatusCode: http.StatusForbidden,
-		StatusText:     http.StatusText(http.StatusForbidden),
-		ErrorText:      err.Error(),
-	}
+	return jsonError(http.StatusForbidden, err)
 }
 
 func ErrNotFound(err error) render.Renderer {
-	return &ErrResponse{
-		Err:            err,
-		HTTPStatusCode: http.StatusNotFound,
-		StatusText:     http.StatusText(http.StatusNotFound),
-		ErrorText:      err.Error(),
-	}
+	return jsonError(http.StatusNotFound, err)
 }
 
 func ErrUnexpected(err error) render.Renderer {
+	return jsonError(http.StatusInternalServerError, err)
+}
+
+func jsonError(code int, err error) render.Renderer {
+	errList := make([]string, 0)
+	for _, line := range strings.Split(err.Error(), "\n") {
+		errList = append(errList, line)
+	}
+
 	return &ErrResponse{
 		Err:            err,
-		HTTPStatusCode: http.StatusInternalServerError,
-		StatusText:     http.StatusText(http.StatusInternalServerError),
-		ErrorText:      err.Error(),
+		HTTPStatusCode: code,
+		StatusText:     http.StatusText(code),
+		ErrorText:      errList,
 	}
 }

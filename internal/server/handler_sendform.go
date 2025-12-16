@@ -27,28 +27,28 @@ import (
 const formMaxMemory = 32 << 20
 
 var (
-	ErrMissingFormIDOrHash  = errors.New("missing form ID or token hash")
-	ErrInvalidFormIDOrToken = errors.New("invalid form ID or token")
-	ErrFailedToParseForm    = fmt.Errorf("failed to parse form submission")
-	ErrMissingRequiredField = errors.New("missing required field")
+	ErrMissingFormIDOrHash            = errors.New("missing form ID or token hash")
+	ErrInvalidFormIDOrToken           = errors.New("invalid form ID or token")
+	ErrFailedToParseForm              = fmt.Errorf("failed to parse form submission")
+	ErrRequiredFieldsValidationFailed = errors.New("required fields validation failed")
 )
 
 func (s *Server) HandlerAPISendFormPost(w http.ResponseWriter, r *http.Request) {
 	formID := chi.URLParam(r, "formID")
 	hash := chi.URLParam(r, "hash")
 	if formID == "" || hash == "" {
-		_ = render.Render(w, r, ErrInvalidRequest(ErrMissingFormIDOrHash))
+		_ = render.Render(w, r, ErrBadRequest(ErrMissingFormIDOrHash))
 		return
 	}
 	providedHash, err := hex.DecodeString(hash)
 	if err != nil {
 		s.log.Error("failed to decode provided form token hash", logger.Err(err))
-		_ = render.Render(w, r, ErrInvalidRequest(ErrInvalidFormIDOrToken))
+		_ = render.Render(w, r, ErrBadRequest(ErrInvalidFormIDOrToken))
 		return
 	}
 	if len(providedHash) != sha256.Size {
 		s.log.Error("invalid form token hash length", slog.Int("length", len(providedHash)))
-		_ = render.Render(w, r, ErrInvalidRequest(ErrInvalidFormIDOrToken))
+		_ = render.Render(w, r, ErrBadRequest(ErrInvalidFormIDOrToken))
 		return
 	}
 
@@ -96,11 +96,11 @@ func (s *Server) HandlerAPISendFormPost(w http.ResponseWriter, r *http.Request) 
 		fails, missingFields := s.failsRequiredFields(form.Validation.Fields, r.MultipartForm.Value)
 		if fails {
 			s.log.Warn("submitted values did not pass required field validation")
-			errList := []error{ErrMissingRequiredField}
+			errList := []error{ErrRequiredFieldsValidationFailed}
 			for field, msg := range missingFields {
 				errList = append(errList, fmt.Errorf("%s: %s", field, msg))
 			}
-			_ = render.Render(w, r, ErrInvalidRequest(errors.Join(errList...)))
+			_ = render.Render(w, r, ErrBadRequest(errors.Join(errList...)))
 			return
 		}
 	}
