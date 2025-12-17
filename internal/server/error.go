@@ -42,11 +42,7 @@ func ErrUnexpected(err error) render.Renderer {
 }
 
 func jsonError(code int, err error) render.Renderer {
-	errList := make([]string, 0)
-	for _, line := range strings.Split(err.Error(), "\n") {
-		errList = append(errList, line)
-	}
-
+	errList := append([]string{}, strings.Split(err.Error(), "\n")...)
 	return &ErrResponse{
 		Err:            err,
 		HTTPStatusCode: code,
