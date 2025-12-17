@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: Winni Neessen <wn@neessen.dev>
+//
+// SPDX-License-Identifier: MIT
+
 package server
 
 import (
@@ -43,17 +47,5 @@ func NewResponse(code int, msg string, data any) *Response {
 		Message:    msg,
 		Timestamp:  time.Now().UTC(),
 		Data:       data,
-	}
-}
-
-// NewError builds an error envelope with optional details.
-func NewError(code int, msg string, details ...ErrorDetail) *Response {
-	return &Response{
-		Success:    false,
-		StatusCode: code,
-		Status:     http.StatusText(code),
-		Message:    msg,
-		Timestamp:  time.Now().UTC(),
-		Errors:     details,
 	}
 }

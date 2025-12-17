@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: Winni Neessen <wn@neessen.dev>
+#
+# SPDX-License-Identifier: MIT
+
 ## Build first
 FROM --platform=${BUILDPLATFORM} golang:latest@sha256:a22b2e6c5e753345b9759fba9e5c1731ebe28af506745e98f406cc85d50c828e AS builder
 RUN mkdir /builddir
