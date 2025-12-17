@@ -142,6 +142,6 @@ jobs:
               go test -race -shuffle=on --coverprofile=coverage.coverprofile --covermode=atomic ./...
           - name: Upload coverage to Codecov
             if: success()
-            uses: codecov/codecov-action@7f8b4b4bde536c465e797be725718b88c5d95e0e # v5.1.1
+            uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
             with:
               token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
