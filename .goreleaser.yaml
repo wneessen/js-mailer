@@ -1,0 +1,66 @@
+# SPDX-FileCopyrightText: Winni Neessen <wn@neessen.dev>
+#
+# SPDX-License-Identifier: MIT
+
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+    - go mod download
+    - go mod verify
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+    - linux
+    goarch:
+      - arm64
+      - amd64
+    goamd64:
+      - v1
+    main: ./cmd/js-mailer/
+    binary: js-mailer
+    ldflags:
+      - -w -s -extldflags "-static" -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.builtBy=goreleaser -X github.com/wneessen/js-mailer/internal/httpclient.version={{.Version}}
+changelog:
+  use: github-native
+
+nfpms:
+  - vendor: Winni Neessen
+    homepage: https://github.com/wneessen/js-mailer
+    maintainer: Winni Neessen <wn@neessen.dev>
+    description: |-
+      A form mailer web service for JavaScript-based websites
+    license: MIT
+    formats:
+      - apk
+      - deb
+      - rpm
+      - termux.deb
+      - archlinux
+    file_name_template: >-
+      {{- trimsuffix .ConventionalFileName .ConventionalExtension -}}
+      {{- if not (eq .Amd64 "v1")}}{{ .Amd64 }}{{ end -}}
+      {{- .ConventionalExtension -}}
+
+signs:
+  - artifacts: checksum
+    cmd: gpg2
+    args:
+      - "--batch"
+      - "-u"
+      - "{{ .Env.GPG_FINGERPRINT }}"
+      - "--output"
+      - "${signature}"
+      - "--detach-sign"
+      - "${artifact}"
+
+universal_binaries:
+  - replace: false
+
+report_sizes: true
+
+gomod:
+  mod: mod
