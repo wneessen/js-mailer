@@ -8,18 +8,24 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"strings"
 )
 
 type Logger struct {
 	*slog.Logger
 }
 
-func New(level slog.Level) *Logger {
-	return NewLogger(level, os.Stderr)
+func New(level slog.Level, format string) *Logger {
+	return NewLogger(level, format, os.Stderr)
 }
 
-func NewLogger(level slog.Level, output io.Writer) *Logger {
-	return &Logger{slog.New(slog.NewTextHandler(output, &slog.HandlerOptions{Level: level}))}
+func NewLogger(level slog.Level, format string, output io.Writer) *Logger {
+	switch strings.ToLower(format) {
+	case "text":
+		return &Logger{slog.New(slog.NewTextHandler(output, &slog.HandlerOptions{Level: level}))}
+	default:
+		return &Logger{slog.New(slog.NewJSONHandler(output, &slog.HandlerOptions{Level: level}))}
+	}
 }
 
 func Err(err error) slog.Attr {

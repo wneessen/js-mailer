@@ -19,7 +19,8 @@ const configEnv = "JSMAILER"
 // Config represents the global config object struct
 type Config struct {
 	Log struct {
-		Level slog.Level `fig:"level" default:"0"`
+		Level  slog.Level `fig:"level" default:"0"`
+		Format string     `fig:"format" default:"json"`
 	}
 
 	Forms struct {

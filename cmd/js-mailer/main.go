@@ -7,6 +7,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -29,13 +30,10 @@ func main() {
 		syscall.SIGABRT, os.Interrupt)
 	defer cancel()
 
-	// We start with a very basic logger
-	log := logger.New(slog.LevelError)
-
 	// Read default config
 	conf, err := config.New()
 	if err != nil {
-		log.Error("failed to load config", logger.Err(err))
+		_, _ = fmt.Fprintf(os.Stderr, "failed to load default config: %s\n", err)
 		os.Exit(1)
 	}
 
@@ -47,13 +45,13 @@ func main() {
 		path := filepath.Dir(*confPath)
 		conf, err = config.NewFromFile(path, file)
 		if err != nil {
-			log.Error("failed to load config from file", logger.Err(err))
+			_, _ = fmt.Fprintf(os.Stderr, "failed to load config from file: %s\n", err)
 			os.Exit(1)
 		}
 	}
 
-	// Initialize a new logger with the config
-	log = logger.New(conf.Log.Level)
+	// Initialize a logger based on the config
+	log := logger.New(conf.Log.Level, conf.Log.Format)
 
 	// Initalize server instance
 	srv := server.New(conf, log)
