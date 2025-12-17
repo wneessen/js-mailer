@@ -44,14 +44,13 @@ func (s *Server) routes(_ context.Context) error {
 
 	// Register routes
 	s.mux.Get("/ping", s.HandlerAPIPingGet)
-
-	// Preflight check routes
-	s.mux.With(s.preflightCheck).Route("/", func(r chi.Router) {
-		r.Get("/token/{formID}", s.HandlerAPITokenGet)
-		r.Options("/token/{formID}", s.HandlerAPITokenGet)
-
-		r.Post("/send/{formID}/{hash}", s.HandlerAPISendFormPost)
-		r.Options("/send/{formID}/{hash}", s.HandlerAPISendFormPost)
+	s.mux.With(s.preflightCheck).Route("/token/{formID}", func(r chi.Router) {
+		r.Get("/", s.HandlerAPITokenGet)
+		r.Options("/", s.HandlerAPITokenGet)
+	})
+	s.mux.With(s.preflightCheck).Route("/send/{formID}/{hash}", func(r chi.Router) {
+		r.Post("/", s.HandlerAPISendFormPost)
+		r.Options("/", s.HandlerAPISendFormPost)
 	})
 
 	return nil
