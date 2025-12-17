@@ -59,7 +59,8 @@ func main() {
 	srv := server.New(conf, log)
 
 	// Start server
-	log.Info("starting js-mailer service")
+	log.Info("starting js-mailer service", slog.String("version", version),
+		slog.String("commit", commit), slog.String("date", date))
 	if err = srv.Start(ctx); err != nil {
 		log.Error("failed to start server", logger.Err(err))
 	}
