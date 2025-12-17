@@ -1,7 +1,7 @@
 <!--
-SPDX-FileCopyrightText: 2021-2024 Winni Neessen <wn@neessen.dev>
+SPDX-FileCopyrightText: Winni Neessen <wn@neessen.dev>
 
-SPDX-License-Identifier: CC0-1.0
+SPDX-License-Identifier: MIT
 -->
 
 # Security Policy
