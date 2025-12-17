@@ -21,3 +21,4 @@ docker-images
 
 .idea
 tmp
+dist
