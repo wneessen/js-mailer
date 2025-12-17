@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: Winni Neessen <wn@neessen.dev>
+
+SPDX-License-Identifier: MIT
+-->
+
 # JS-Mailer - Form mailer for JavaScript-based websites
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/wneessen/js-mailer)](https://goreportcard.com/report/github.com/wneessen/js-mailer) [![Build Status](https://api.cirrus-ci.com/github/wneessen/js-mailer.svg)](https://cirrus-ci.com/github/wneessen/js-mailer) <a href="https://ko-fi.com/D1D24V9IX"><img src="https://uploads-ssl.webflow.com/5c14e387dab576fe667689cf/5cbed8a4ae2b88347c06c923_BuyMeACoffee_blue.png" height="20" alt="buy ma a coffee"></a>

@@ -1,15 +1,20 @@
-package form
+// SPDX-FileCopyrightText: Winni Neessen <wn@neessen.dev>
+//
+// SPDX-License-Identifier: MIT
+
+package forms
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
 	"github.com/kkyr/fig"
-
-	"github.com/wneessen/js-mailer/config"
 )
 
-// Form reflect the configuration struct for form configurations
+var ErrFormNotFound = errors.New("form not found")
+
+// Form is the configuration struct for a form
 type Form struct {
 	Content struct {
 		Subject string
@@ -43,7 +48,7 @@ type Form struct {
 			Enabled   bool   `fig:"enabled"`
 			SecretKey string `fig:"secret_key"`
 		}
-		Honeypot  *string `fig:"honeypot"`
+		Honeypot  string `fig:"honeypot"`
 		Recaptcha struct {
 			Enabled   bool   `fig:"enabled"`
 			SecretKey string `fig:"secret_key"`
@@ -55,7 +60,6 @@ type Form struct {
 		PrivateCaptcha struct {
 			Host    string `fig:"host"`
 			Enabled bool   `fig:"enabled"`
-			SiteKey string `fig:"site_key"`
 			APIKey  string `fig:"api_key"`
 		} `fig:"private_captcha"`
 	}
@@ -69,21 +73,29 @@ type ValidationField struct {
 	Value    string `fig:"value"`
 }
 
-// NewForm returns a new Form object to the caller. It fails with an error when
-// the form is question wasn't found or does not fulfill the syntax requirements
-func NewForm(c *config.Config, i string) (Form, error) {
-	root, err := os.OpenRoot(c.Forms.Path)
+func New(path, formID string) (*Form, error) {
+	form := new(Form)
+
+	root, err := os.OpenRoot(path)
 	if err != nil {
-		return Form{}, fmt.Errorf("failed to open root of forms path: %w", err)
-	}
-	_, err = root.Stat(fmt.Sprintf("%s.json", i))
-	if err != nil {
-		return Form{}, fmt.Errorf("failed to stat form config: %w", err)
-	}
-	var formObj Form
-	if err = fig.Load(&formObj, fig.File(fmt.Sprintf("%s.json", i)), fig.Dirs(c.Forms.Path)); err != nil {
-		return Form{}, fmt.Errorf("failed to read form config: %w", err)
+		return form, fmt.Errorf("failed to open root of form path: %w", err)
 	}
 
-	return formObj, nil
+	var formFile string
+	exts := []string{"toml", "yaml", "yml", "json"}
+	for _, ext := range exts {
+		if _, err = root.Stat(formID + "." + ext); err == nil {
+			formFile = formID + "." + ext
+			break
+		}
+	}
+	if formFile == "" {
+		return form, ErrFormNotFound
+	}
+
+	if err = fig.Load(form, fig.File(formFile), fig.Dirs(root.Name())); err != nil {
+		return form, fmt.Errorf("failed parse form config: %w", err)
+	}
+
+	return form, nil
 }

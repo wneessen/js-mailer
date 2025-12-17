@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: Winni Neessen <wn@neessen.dev>
+#
+# SPDX-License-Identifier: MIT
+
 # Binaries for programs and plugins
 *.exe
 *.exe~
@@ -14,11 +18,11 @@
 # Dependency directories (remove the comment below to include it)
 # vendor/
 
-js-mailer
-!etc/js-mailer
 builds
 !builds/.gitkeep
 docker-images
 !docker-images/.gitkeep
 
 .idea
+tmp
+dist

@@ -1,15 +1,27 @@
+# SPDX-FileCopyrightText: Winni Neessen <wn@neessen.dev>
+#
+# SPDX-License-Identifier: MIT
+
 ## Build first
-FROM golang:latest@sha256:36b4f45d2874905b9e8573b783292629bcb346d0a70d8d7150b6df545234818f as builder
+FROM --platform=${BUILDPLATFORM} golang:latest@sha256:a22b2e6c5e753345b9759fba9e5c1731ebe28af506745e98f406cc85d50c828e AS builder
 RUN mkdir /builddir
 ADD . /builddir/
 WORKDIR /builddir
 RUN go mod tidy && go mod download && go mod verify
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -ldflags '-w -s -extldflags "-static"' -o js-mailer \
-    github.com/wneessen/js-mailer
+
+ARG VERSION
+ARG COMMIT
+ARG DATE
+ARG BUILDARCH
+ARG TARGETARCH
+RUN GOOS=linux GOARCH=${TARGETARCH} CGO_ENABLED=0 go build \
+    -a -installsuffix cgo \
+    -ldflags "-w -s -extldflags \"-static\" -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.date=${DATE}" \
+    -o js-mailer github.com/wneessen/js-mailer/cmd/js-mailer
 
 ## Create scratch image
 FROM scratch
-LABEL maintainer="wn@neessen.net"
+LABEL maintainer="wn@neessen.dev"
 COPY ["docker-files/passwd", "/etc/passwd"]
 COPY ["docker-files/group", "/etc/group"]
 COPY --from=builder ["/etc/ssl/certs/ca-certificates.crt", "/etc/ssl/cert.pem"]

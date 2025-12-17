@@ -1,6 +1,6 @@
 {
-    "api": {
-        "bind_addr": "0.0.0.0",
+    "server": {
+        "bind_addr": "127.0.0.1",
         "port": 8765
     },
     "forms": {
