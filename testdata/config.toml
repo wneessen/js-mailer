@@ -1,0 +1,14 @@
+[log]
+level = 0
+format = "json"
+
+[forms]
+path = "testdata"
+default_expiration = "15m"
+
+[server]
+address = "0.0.0.0"
+port = "8080"
+cache_lifetime = "30m"
+timeout = "20s"
+request_limit = "5M"
