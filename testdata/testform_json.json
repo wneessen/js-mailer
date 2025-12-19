@@ -1,0 +1,62 @@
+{
+  "content": {
+    "subject": "Contact form submission",
+    "fields": ["name", "email", "message"]
+  },
+  "confirmation": {
+    "enabled": true,
+    "rcpt_field": "email",
+    "subject": "We received your message",
+    "content": "Thank you for contacting us. We will get back to you shortly."
+  },
+  "domains": ["example.com", "www.example.com"],
+  "id": "contact-form",
+  "recipients": ["support@example.com", "sales@example.com"],
+  "replyTo": {
+    "field": "email"
+  },
+  "secret": "test-secret-key",
+  "sender": "no-reply@example.com",
+  "server": {
+    "host": "smtp.example.com",
+    "port": 587,
+    "username": "smtp-user",
+    "password": "smtp-password",
+    "timeout": "10s",
+    "force_tls": true
+  },
+  "validation": {
+    "fields": [
+      {
+        "name": "email",
+        "required": true,
+        "type": "email",
+        "value": ""
+      },
+      {
+        "name": "message",
+        "required": true,
+        "type": "string",
+        "value": ""
+      }
+    ],
+    "hcaptcha": {
+      "enabled": false,
+      "secret_key": ""
+    },
+    "honeypot": "company",
+    "recaptcha": {
+      "enabled": true,
+      "secret_key": "recaptcha-test-key"
+    },
+    "turnstile": {
+      "enabled": false,
+      "secret_key": ""
+    },
+    "private_captcha": {
+      "host": "http://localhost:8081",
+      "enabled": true,
+      "api_key": "private-captcha-key"
+    }
+  }
+}
