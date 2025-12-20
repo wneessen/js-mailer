@@ -6,6 +6,7 @@ package server
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -109,14 +110,14 @@ func TestServer_HandlerAPIPingGet(t *testing.T) {
 		}
 
 		type response struct {
-			Success    bool          `json:"success"`
-			StatusCode int           `json:"statusCode"`
-			Status     string        `json:"status"`
-			Message    string        `json:"message,omitempty"`
-			Timestamp  time.Time     `json:"timestamp"`
-			RequestID  string        `json:"requestId,omitempty"`
-			Data       PingResponse  `json:"data,omitempty"`
-			Errors     []ErrorDetail `json:"errors,omitempty"`
+			Success    bool         `json:"success"`
+			StatusCode int          `json:"statusCode"`
+			Status     string       `json:"status"`
+			Message    string       `json:"message,omitempty"`
+			Timestamp  time.Time    `json:"timestamp"`
+			RequestID  string       `json:"requestId,omitempty"`
+			Data       PingResponse `json:"data,omitempty"`
+			Errors     []string     `json:"errors,omitempty"`
 		}
 		body := new(response)
 		if err = json.NewDecoder(recorder.Body).Decode(&body); err != nil {
@@ -151,7 +152,7 @@ func TestServer_HandlerAPIPingGet(t *testing.T) {
 
 func TestServer_HandlerAPITokenGet(t *testing.T) {
 	t.Run("a token is returned for a valid config", func(t *testing.T) {
-		server, err := testServer(t, slog.LevelDebug, os.Stderr)
+		server, err := testServer(t, slog.LevelDebug, io.Discard)
 		if err != nil {
 			t.Fatalf("failed to create test server: %s", err)
 		}
@@ -161,6 +162,7 @@ func TestServer_HandlerAPITokenGet(t *testing.T) {
 		router.With(server.preflightCheck).Get("/token/{formID}", server.HandlerAPITokenGet)
 
 		req := httptest.NewRequest(http.MethodGet, "/token/testform_toml", nil)
+		req.TLS = &tls.ConnectionState{}
 		req.Header.Set("Origin", "https://example.com")
 		recorder := httptest.NewRecorder()
 		router.ServeHTTP(recorder, req)
@@ -177,7 +179,7 @@ func TestServer_HandlerAPITokenGet(t *testing.T) {
 			Timestamp  time.Time     `json:"timestamp"`
 			RequestID  string        `json:"requestId,omitempty"`
 			Data       TokenResponse `json:"data,omitempty"`
-			Errors     []ErrorDetail `json:"errors,omitempty"`
+			Errors     []string      `json:"errors,omitempty"`
 		}
 		body := new(response)
 		if err = json.NewDecoder(recorder.Body).Decode(&body); err != nil {
@@ -218,9 +220,120 @@ func TestServer_HandlerAPITokenGet(t *testing.T) {
 		if body.Data.FormID != wantFormID {
 			t.Errorf("expected form ID %s, got: %s", wantFormID, body.Data.FormID)
 		}
-		urlPrefix := "http://example.com/send/contact-form/"
+		urlPrefix := "https://example.com/send/contact-form/"
 		if !strings.HasPrefix(body.Data.URL, urlPrefix) {
 			t.Errorf("expected URL prefix %s, got: %s", urlPrefix, body.Data.URL)
+		}
+	})
+	t.Run("a token is not provided to non-allowed domains", func(t *testing.T) {
+		server, err := testServer(t, slog.LevelDebug, io.Discard)
+		if err != nil {
+			t.Fatalf("failed to create test server: %s", err)
+		}
+		server.config.Forms.Path = "../../testdata"
+
+		router := chi.NewRouter()
+		router.With(server.preflightCheck).Get("/token/{formID}", server.HandlerAPITokenGet)
+
+		req := httptest.NewRequest(http.MethodGet, "/token/testform_toml", nil)
+		req.TLS = &tls.ConnectionState{}
+		req.Header.Set("Origin", "https://non-allowed.example.com")
+		recorder := httptest.NewRecorder()
+		router.ServeHTTP(recorder, req)
+
+		if recorder.Code != http.StatusForbidden {
+			t.Errorf("expected status code %d, got: %d", http.StatusForbidden, recorder.Code)
+		}
+	})
+	t.Run("a token is not provided when no origin is sent", func(t *testing.T) {
+		server, err := testServer(t, slog.LevelDebug, io.Discard)
+		if err != nil {
+			t.Fatalf("failed to create test server: %s", err)
+		}
+		server.config.Forms.Path = "../../testdata"
+
+		router := chi.NewRouter()
+		router.With(server.preflightCheck).Get("/token/{formID}", server.HandlerAPITokenGet)
+
+		req := httptest.NewRequest(http.MethodGet, "/token/testform_toml", nil)
+		recorder := httptest.NewRecorder()
+		router.ServeHTTP(recorder, req)
+
+		if recorder.Code != http.StatusForbidden {
+			t.Errorf("expected status code %d, got: %d", http.StatusForbidden, recorder.Code)
+		}
+	})
+	t.Run("a token is not provided when no form ID is set", func(t *testing.T) {
+		server, err := testServer(t, slog.LevelDebug, io.Discard)
+		if err != nil {
+			t.Fatalf("failed to create test server: %s", err)
+		}
+		server.config.Forms.Path = "../../testdata"
+
+		router := chi.NewRouter()
+		router.With(server.preflightCheck).Get("/token", server.HandlerAPITokenGet)
+
+		req := httptest.NewRequest(http.MethodGet, "/token", nil)
+		recorder := httptest.NewRecorder()
+		router.ServeHTTP(recorder, req)
+
+		data := new(Response)
+		if err = json.NewDecoder(recorder.Result().Body).Decode(data); err != nil {
+			t.Fatalf("failed to decode JSON response: %s", err)
+		}
+		if recorder.Code != http.StatusBadRequest {
+			t.Errorf("expected status code %d, got: %d", http.StatusBadRequest, recorder.Code)
+		}
+		if data.Success {
+			t.Error("expected request not to succeed")
+		}
+		if data.StatusCode != http.StatusBadRequest {
+			t.Errorf("expected status code %d, got: %d", http.StatusBadRequest, data.StatusCode)
+		}
+		if data.Status != http.StatusText(http.StatusBadRequest) {
+			t.Errorf("expected status %s, got: %s", http.StatusText(http.StatusBadRequest), data.Status)
+		}
+		wantMsg := "request could not be processed"
+		if data.Message != wantMsg {
+			t.Errorf("expected message %s, got: %s", wantMsg, data.Message)
+		}
+		if data.Timestamp.IsZero() {
+			t.Error("expected timestamp to be set")
+		}
+		if len(data.Errors) != 1 {
+			t.Errorf("expected an error, got: %d", len(data.Errors))
+		}
+		if data.Errors[0] != ErrNoFormID.Error() {
+			t.Errorf("expected error %s, got: %s", ErrNoFormID.Error(), data.Errors[0])
+		}
+	})
+	t.Run("a token is not provided when no form ID is set", func(t *testing.T) {
+		server, err := testServer(t, slog.LevelDebug, io.Discard)
+		if err != nil {
+			t.Fatalf("failed to create test server: %s", err)
+		}
+		server.config.Forms.Path = "../../testdata"
+
+		router := chi.NewRouter()
+		router.With(server.preflightCheck).Get("/token/{formID}", server.HandlerAPITokenGet)
+
+		req := httptest.NewRequest(http.MethodGet, "/token/non_existing_form", nil)
+		recorder := httptest.NewRecorder()
+		router.ServeHTTP(recorder, req)
+
+		data := new(Response)
+		if err = json.NewDecoder(recorder.Result().Body).Decode(data); err != nil {
+			t.Fatalf("failed to decode JSON response: %s", err)
+		}
+		if recorder.Code != http.StatusBadRequest {
+			t.Errorf("expected status code %d, got: %d", http.StatusBadRequest, recorder.Code)
+		}
+		if len(data.Errors) != 1 {
+			t.Errorf("expected an error, got: %d", len(data.Errors))
+		}
+		wantErr := "form not found"
+		if data.Errors[0] != wantErr {
+			t.Errorf("expected error %s, got: %s", wantErr, data.Errors[0])
 		}
 	})
 }
