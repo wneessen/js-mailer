@@ -338,6 +338,90 @@ func TestServer_HandlerAPITokenGet(t *testing.T) {
 	})
 }
 
+func TestServer_preflightCheck(t *testing.T) {
+	t.Run("preflight request is allowed", func(t *testing.T) {
+		server, err := testServer(t, slog.LevelDebug, io.Discard)
+		if err != nil {
+			t.Fatalf("failed to create test server: %s", err)
+		}
+		server.config.Forms.Path = "../../testdata"
+
+		router := chi.NewRouter()
+		router.With(server.preflightCheck).Options("/token/{formID}", server.HandlerAPITokenGet)
+
+		req := httptest.NewRequest(http.MethodOptions, "/token/testform_toml", nil)
+		req.TLS = &tls.ConnectionState{}
+		req.Header.Set("Origin", "https://example.com")
+		req.Header.Set("Access-Control-Request-Method", http.MethodPost)
+		recorder := httptest.NewRecorder()
+		router.ServeHTTP(recorder, req)
+
+		if recorder.Code != http.StatusNoContent {
+			t.Errorf("expected status code %d, got: %d", http.StatusNoContent, recorder.Code)
+		}
+	})
+	t.Run("preflight request with non-allowed domain", func(t *testing.T) {
+		server, err := testServer(t, slog.LevelDebug, io.Discard)
+		if err != nil {
+			t.Fatalf("failed to create test server: %s", err)
+		}
+		server.config.Forms.Path = "../../testdata"
+
+		router := chi.NewRouter()
+		router.With(server.preflightCheck).Options("/token/{formID}", server.HandlerAPITokenGet)
+
+		req := httptest.NewRequest(http.MethodOptions, "/token/testform_toml", nil)
+		req.TLS = &tls.ConnectionState{}
+		req.Header.Set("Origin", "https://example-is-not-allowed.com")
+		recorder := httptest.NewRecorder()
+		router.ServeHTTP(recorder, req)
+
+		if recorder.Code != http.StatusForbidden {
+			t.Errorf("expected status code %d, got: %d", http.StatusForbidden, recorder.Code)
+		}
+	})
+	t.Run("preflight request with existing config", func(t *testing.T) {
+		server, err := testServer(t, slog.LevelDebug, io.Discard)
+		if err != nil {
+			t.Fatalf("failed to create test server: %s", err)
+		}
+		server.config.Forms.Path = "../../testdata"
+
+		router := chi.NewRouter()
+		router.With(server.preflightCheck).Options("/token/{formID}", server.HandlerAPITokenGet)
+
+		req := httptest.NewRequest(http.MethodOptions, "/token/testform_does_not_exist", nil)
+		req.TLS = &tls.ConnectionState{}
+		req.Header.Set("Origin", "https://example.com")
+		recorder := httptest.NewRecorder()
+		router.ServeHTTP(recorder, req)
+
+		if recorder.Code != http.StatusBadRequest {
+			t.Errorf("expected status code %d, got: %d", http.StatusForbidden, recorder.Code)
+		}
+	})
+	t.Run("preflight request without form id", func(t *testing.T) {
+		server, err := testServer(t, slog.LevelDebug, io.Discard)
+		if err != nil {
+			t.Fatalf("failed to create test server: %s", err)
+		}
+		server.config.Forms.Path = "../../testdata"
+
+		router := chi.NewRouter()
+		router.With(server.preflightCheck).Options("/token", server.HandlerAPITokenGet)
+
+		req := httptest.NewRequest(http.MethodOptions, "/token", nil)
+		req.TLS = &tls.ConnectionState{}
+		req.Header.Set("Origin", "https://example.com")
+		recorder := httptest.NewRecorder()
+		router.ServeHTTP(recorder, req)
+
+		if recorder.Code != http.StatusBadRequest {
+			t.Errorf("expected status code %d, got: %d", http.StatusForbidden, recorder.Code)
+		}
+	})
+}
+
 func TestResponse_Render(t *testing.T) {
 	t.Run("render response without timestamp", func(t *testing.T) {
 		req := new(http.Request)
