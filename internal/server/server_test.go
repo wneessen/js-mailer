@@ -426,7 +426,7 @@ func TestServer_preflightCheck(t *testing.T) {
 
 func TestServer_HandlerAPISendFormPost(t *testing.T) {
 	t.Run("a form is sent successfully", func(t *testing.T) {
-		server, err := testServer(t, slog.LevelDebug, os.Stderr)
+		server, err := testServer(t, slog.LevelDebug, io.Discard)
 		if err != nil {
 			t.Fatalf("failed to create test server: %s", err)
 		}
@@ -455,7 +455,8 @@ func TestServer_HandlerAPISendFormPost(t *testing.T) {
 
 		var buf bytes.Buffer
 		writer := multipart.NewWriter(&buf)
-		_ = writer.WriteField("test", "test")
+		_ = writer.WriteField("email", "example@example.com")
+		_ = writer.WriteField("message", "this is a test message")
 		_ = writer.Close()
 		req = httptest.NewRequest(http.MethodPost, body.Data.URL, &buf)
 		req.Header.Set("Content-Type", writer.FormDataContentType())
@@ -463,8 +464,51 @@ func TestServer_HandlerAPISendFormPost(t *testing.T) {
 		req.Header.Set("Origin", "https://example.com")
 		router.ServeHTTP(recorder, req)
 
-		t.Logf("response: %+v", recorder)
+		type sendResponse struct {
+			Success    bool         `json:"success"`
+			StatusCode int          `json:"statusCode"`
+			Status     string       `json:"status"`
+			Message    string       `json:"message,omitempty"`
+			Timestamp  time.Time    `json:"timestamp"`
+			RequestID  string       `json:"requestId,omitempty"`
+			Data       SendResponse `json:"data,omitempty"`
+			Errors     []string     `json:"errors,omitempty"`
+		}
+		resp := new(sendResponse)
+		if err = json.NewDecoder(recorder.Body).Decode(&resp); err != nil {
+			t.Fatalf("failed to decode JSON response: %s", err)
+		}
 
+		if !resp.Success {
+			t.Error("expected request to succeed")
+		}
+		if resp.StatusCode != http.StatusOK {
+			t.Errorf("expected status code %d, got: %d", http.StatusOK, resp.StatusCode)
+		}
+		if resp.Status != http.StatusText(http.StatusOK) {
+			t.Errorf("expected status %s, got: %s", http.StatusText(http.StatusOK), resp.Status)
+		}
+		wantMsg := "form mail successfully delivered"
+		if resp.Message != wantMsg {
+			t.Errorf("expected message %s, got: %s", wantMsg, resp.Message)
+		}
+		if resp.Timestamp.IsZero() {
+			t.Errorf("expected timestamp to be set, got: %s", resp.Timestamp)
+		}
+		wantFormID := "contact-form"
+		if resp.Data.FormID != wantFormID {
+			t.Errorf("expected form ID %s, got: %s", wantFormID, resp.Data.FormID)
+		}
+		if time.Unix(resp.Data.SentAt, 0).IsZero() {
+			t.Errorf("expected sent at to be set, got: %s", time.Unix(resp.Data.SentAt, 0))
+		}
+		wantStatus := "dry-run succeeded"
+		if resp.Data.ConfirmationResponse != wantStatus {
+			t.Errorf("expected confirmation response %s, got: %s", wantStatus, resp.Data.ConfirmationResponse)
+		}
+		if resp.Data.MessageResponse != wantStatus {
+			t.Errorf("expected message response %s, got: %s", wantStatus, resp.Data.MessageResponse)
+		}
 	})
 }
 

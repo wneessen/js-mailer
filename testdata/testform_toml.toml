@@ -46,7 +46,7 @@ enabled = false
 secret_key = ""
 
 [validation.recaptcha]
-enabled = true
+enabled = false
 secret_key = "recaptcha-test-key"
 
 [validation.turnstile]
@@ -55,5 +55,5 @@ secret_key = ""
 
 [validation.private_captcha]
 host = "http://localhost:8081"
-enabled = true
+enabled = false
 api_key = "private-captcha-key"
