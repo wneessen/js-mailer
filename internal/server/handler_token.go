@@ -8,10 +8,8 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -61,21 +59,6 @@ func (s *Server) HandlerAPITokenGet(w http.ResponseWriter, r *http.Request) {
 		_ = render.Render(w, r, ErrForbidden(ErrDomainNotAllowed))
 		return
 	}
-
-	allowedDomain := false
-	for _, domain := range form.Domains {
-		if strings.EqualFold(origin, fmt.Sprintf("https://%s", domain)) {
-			allowedDomain = true
-			break
-		}
-	}
-	if !allowedDomain {
-		s.log.Error("domain not allowed", slog.String("origin", origin), slog.String("form", form.ID),
-			slog.Any("allowed_domains", form.Domains))
-		_ = render.Render(w, r, ErrForbidden(ErrDomainNotAllowed))
-		return
-	}
-	w.Header().Set("Access-Control-Allow-Origin", origin)
 
 	schema := "http"
 	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
