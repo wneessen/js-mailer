@@ -5,12 +5,14 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -216,11 +218,11 @@ func TestServer_HandlerAPITokenGet(t *testing.T) {
 		if body.Data.Encoding != encodingMPFormData {
 			t.Errorf("expected encoding %s, got: %s", encodingMPFormData, body.Data.Encoding)
 		}
-		wantFormID := "contact-form"
+		wantFormID := "testform_toml"
 		if body.Data.FormID != wantFormID {
 			t.Errorf("expected form ID %s, got: %s", wantFormID, body.Data.FormID)
 		}
-		urlPrefix := "https://example.com/send/contact-form/"
+		urlPrefix := "https://example.com/send/testform_toml/"
 		if !strings.HasPrefix(body.Data.URL, urlPrefix) {
 			t.Errorf("expected URL prefix %s, got: %s", urlPrefix, body.Data.URL)
 		}
@@ -419,6 +421,50 @@ func TestServer_preflightCheck(t *testing.T) {
 		if recorder.Code != http.StatusBadRequest {
 			t.Errorf("expected status code %d, got: %d", http.StatusForbidden, recorder.Code)
 		}
+	})
+}
+
+func TestServer_HandlerAPISendFormPost(t *testing.T) {
+	t.Run("a form is sent successfully", func(t *testing.T) {
+		server, err := testServer(t, slog.LevelDebug, os.Stderr)
+		if err != nil {
+			t.Fatalf("failed to create test server: %s", err)
+		}
+		server.config.Forms.Path = "../../testdata"
+
+		router := chi.NewRouter()
+		router.With(server.preflightCheck).Get("/token/{formID}", server.HandlerAPITokenGet)
+		router.With(server.preflightCheck).Post("/send/{formID}/{hash}", server.HandlerAPISendFormPost)
+
+		req := httptest.NewRequest(http.MethodGet, "/token/testform_toml", nil)
+		req.TLS = &tls.ConnectionState{}
+		req.Header.Set("Origin", "https://example.com")
+		recorder := httptest.NewRecorder()
+		router.ServeHTTP(recorder, req)
+		if recorder.Code != http.StatusCreated {
+			t.Errorf("expected status code %d, got: %d", http.StatusCreated, recorder.Code)
+		}
+
+		type tokenResponse struct {
+			Data TokenResponse `json:"data,omitempty"`
+		}
+		body := new(tokenResponse)
+		if err = json.NewDecoder(recorder.Body).Decode(&body); err != nil {
+			t.Fatalf("failed to decode JSON response: %s", err)
+		}
+
+		var buf bytes.Buffer
+		writer := multipart.NewWriter(&buf)
+		_ = writer.WriteField("test", "test")
+		_ = writer.Close()
+		req = httptest.NewRequest(http.MethodPost, body.Data.URL, &buf)
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+		req.TLS = &tls.ConnectionState{}
+		req.Header.Set("Origin", "https://example.com")
+		router.ServeHTTP(recorder, req)
+
+		t.Logf("response: %+v", recorder)
+
 	})
 }
 
