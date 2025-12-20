@@ -6,6 +6,7 @@ package server
 
 import (
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -24,7 +25,10 @@ const (
 	encodingMPFormData = "multipart/form-data"
 )
 
-var ErrDomainNotAllowed = fmt.Errorf("domain not allowed")
+var (
+	ErrNoFormID         = errors.New("missing form ID")
+	ErrDomainNotAllowed = fmt.Errorf("domain not allowed")
+)
 
 // TokenResponse is the JSON response struct for the token endpoint
 type TokenResponse struct {
@@ -40,7 +44,7 @@ type TokenResponse struct {
 func (s *Server) HandlerAPITokenGet(w http.ResponseWriter, r *http.Request) {
 	formID := chi.URLParam(r, "formID")
 	if formID == "" {
-		_ = render.Render(w, r, ErrBadRequest(fmt.Errorf("missing form ID")))
+		_ = render.Render(w, r, ErrBadRequest(ErrNoFormID))
 		return
 	}
 
