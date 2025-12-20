@@ -150,10 +150,6 @@ func (s *Server) formFromCache(formID, hash string) (*forms.Form, time.Time, tim
 		return nil, createdAt, expiresAt, errors.New("form config not found in cache")
 	}
 
-	if !strings.EqualFold(formID, form.ID) {
-		return nil, createdAt, expiresAt, errors.New("provided form id does not match the form config")
-	}
-
 	return form, createdAt, expiresAt, nil
 }
 
