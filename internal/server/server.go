@@ -54,23 +54,35 @@ func New(conf *config.Config, log *logger.Logger) *Server {
 
 // Start starts up the server and waits for a shutdown signal
 func (s *Server) Start(ctx context.Context) error {
+	ctxServer, cancelServer := context.WithCancel(ctx)
+	defer cancelServer()
+
 	s.log.Info("starting js-mailer http server", slog.String("listen_addr", s.httpSrv.Addr))
 
 	// Assign routes
-	if err := s.routes(ctx); err != nil {
-		return fmt.Errorf("failed to assign routes to muxer: %w", err)
-	}
+	s.routes(ctxServer)
 
+	// Start cache
+	s.cache.Start()
+
+	// Start http server
+	listenerFailed := false
 	go func() {
 		if err := s.httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			s.log.Error("failed to start http listener", logger.Err(err))
+			listenerFailed = true
 		}
+		cancelServer()
 	}()
-	<-ctx.Done()
+	<-ctxServer.Done()
+	if listenerFailed {
+		return fmt.Errorf("failed to start http listener")
+	}
 
+	// Shut down server and services
 	s.log.Info("shutting down js-mailer http server")
-	ctxShutdown, cancel := context.WithTimeout(ctx, time.Second*5)
-	defer cancel()
+	ctxShutdown, cancelStop := context.WithTimeout(ctxServer, time.Second*5)
+	defer cancelStop()
 	if err := s.httpSrv.Shutdown(ctxShutdown); err != nil {
 		s.log.Error("failed to shut down http server gracefully", logger.Err(err))
 	}
