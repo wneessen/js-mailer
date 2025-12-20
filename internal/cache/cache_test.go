@@ -132,6 +132,7 @@ func TestCache_cleanupLoop(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		interval := time.Second
 		cache := New(interval)
+		cache.Start()
 		t.Cleanup(cache.Stop)
 
 		cache.Set("key", testForm, time.Now(), time.Now().Add(interval))
