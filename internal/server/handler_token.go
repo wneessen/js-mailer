@@ -70,10 +70,10 @@ func (s *Server) HandlerAPITokenGet(w http.ResponseWriter, r *http.Request) {
 	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(value)))
 	token := &TokenResponse{
 		Token:      hash,
-		FormID:     form.ID,
+		FormID:     formID,
 		CreateTime: now.Unix(),
 		ExpireTime: expire.Unix(),
-		URL: fmt.Sprintf("%s://%s/send/%s/%s", schema, r.Host, url.QueryEscape(form.ID),
+		URL: fmt.Sprintf("%s://%s/send/%s/%s", schema, r.Host, url.QueryEscape(formID),
 			url.QueryEscape(hash)),
 		Encoding:  encodingMPFormData,
 		ReqMethod: http.MethodPost,
