@@ -40,6 +40,7 @@ type Form struct {
 		Username string
 		Password string
 		ForceTLS bool `fig:"force_tls"`
+		DryRun   bool `fig:"dry_run"`
 	}
 	Validation struct {
 		Fields   []ValidationField `fig:"fields"`
