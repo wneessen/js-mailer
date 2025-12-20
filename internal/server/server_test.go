@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"testing/synctest"
@@ -107,12 +108,21 @@ func TestServer_HandlerAPIPingGet(t *testing.T) {
 			t.Errorf("expected status code %d, got: %d", http.StatusOK, recorder.Code)
 		}
 
-		body := new(Response)
+		type response struct {
+			Success    bool          `json:"success"`
+			StatusCode int           `json:"statusCode"`
+			Status     string        `json:"status"`
+			Message    string        `json:"message,omitempty"`
+			Timestamp  time.Time     `json:"timestamp"`
+			RequestID  string        `json:"requestId,omitempty"`
+			Data       PingResponse  `json:"data,omitempty"`
+			Errors     []ErrorDetail `json:"errors,omitempty"`
+		}
+		body := new(response)
 		if err = json.NewDecoder(recorder.Body).Decode(&body); err != nil {
 			t.Fatalf("failed to decode JSON response: %s", err)
 		}
 
-		//&{25-12-20 12:40:05.672319275 +0000 UTC RequestID: Data:map[ping:pong] Errors:[]}
 		if !body.Success {
 			t.Errorf("expected success, got: %t", body.Success)
 		}
@@ -129,20 +139,88 @@ func TestServer_HandlerAPIPingGet(t *testing.T) {
 		if body.Timestamp.IsZero() {
 			t.Errorf("expected timestamp to be set, got: %s", body.Timestamp)
 		}
-		if body.Data == nil {
-			t.Fatal("expected data to be set")
-		}
-		resp, ok := body.Data.(map[string]interface{})
-		if !ok {
-			t.Fatalf("expected data to be of type map[string]interface{}, got: %T", body.Data)
+		if len(body.Errors) != 0 {
+			t.Errorf("expected no errors, got: %v", body.Errors)
 		}
 		want := "pong"
-		val, found := resp["ping"]
-		if !found {
-			t.Fatal("expected ping response to be set")
+		if body.Data.Ping != want {
+			t.Errorf("expected ping %s, got: %s", want, body.Data.Ping)
 		}
-		if val != want {
-			t.Errorf("expected ping response to be %s, got: %s", want, val)
+	})
+}
+
+func TestServer_HandlerAPITokenGet(t *testing.T) {
+	t.Run("a token is returned for a valid config", func(t *testing.T) {
+		server, err := testServer(t, slog.LevelDebug, os.Stderr)
+		if err != nil {
+			t.Fatalf("failed to create test server: %s", err)
+		}
+		server.config.Forms.Path = "../../testdata"
+
+		router := chi.NewRouter()
+		router.With(server.preflightCheck).Get("/token/{formID}", server.HandlerAPITokenGet)
+
+		req := httptest.NewRequest(http.MethodGet, "/token/testform_toml", nil)
+		req.Header.Set("Origin", "https://example.com")
+		recorder := httptest.NewRecorder()
+		router.ServeHTTP(recorder, req)
+
+		if recorder.Code != http.StatusCreated {
+			t.Errorf("expected status code %d, got: %d", http.StatusCreated, recorder.Code)
+		}
+
+		type response struct {
+			Success    bool          `json:"success"`
+			StatusCode int           `json:"statusCode"`
+			Status     string        `json:"status"`
+			Message    string        `json:"message,omitempty"`
+			Timestamp  time.Time     `json:"timestamp"`
+			RequestID  string        `json:"requestId,omitempty"`
+			Data       TokenResponse `json:"data,omitempty"`
+			Errors     []ErrorDetail `json:"errors,omitempty"`
+		}
+		body := new(response)
+		if err = json.NewDecoder(recorder.Body).Decode(&body); err != nil {
+			t.Fatalf("failed to decode JSON response: %s", err)
+		}
+		if !body.Success {
+			t.Errorf("expected success, got: %t", body.Success)
+		}
+		if body.StatusCode != http.StatusCreated {
+			t.Errorf("expected status code %d, got: %d", http.StatusCreated, body.StatusCode)
+		}
+		if body.Status != http.StatusText(http.StatusCreated) {
+			t.Errorf("expected status %s, got: %s", http.StatusText(http.StatusCreated), body.Status)
+		}
+		wantMsg := "sender token successfully created"
+		if body.Message != wantMsg {
+			t.Errorf("expected message %s, got: %s", wantMsg, body.Message)
+		}
+		if body.Timestamp.IsZero() {
+			t.Errorf("expected timestamp to be set, got: %s", body.Timestamp)
+		}
+		if body.Data.Token == "" {
+			t.Error("expected token to be set")
+		}
+		if time.Unix(body.Data.CreateTime, 0).IsZero() {
+			t.Errorf("expected create time to be set, got: %s", time.Unix(body.Data.CreateTime, 0))
+		}
+		if time.Unix(body.Data.ExpireTime, 0).IsZero() {
+			t.Errorf("expected expire time to be set, got: %s", time.Unix(body.Data.ExpireTime, 0))
+		}
+		if body.Data.ReqMethod != http.MethodPost {
+			t.Errorf("expected request method %s, got: %s", http.MethodPost, body.Data.ReqMethod)
+		}
+		if body.Data.Encoding != encodingMPFormData {
+			t.Errorf("expected encoding %s, got: %s", encodingMPFormData, body.Data.Encoding)
+		}
+		wantFormID := "contact-form"
+		if body.Data.FormID != wantFormID {
+			t.Errorf("expected form ID %s, got: %s", wantFormID, body.Data.FormID)
+		}
+		urlPrefix := "http://example.com/send/contact-form/"
+		if !strings.HasPrefix(body.Data.URL, urlPrefix) {
+			t.Errorf("expected URL prefix %s, got: %s", urlPrefix, body.Data.URL)
 		}
 	})
 }
