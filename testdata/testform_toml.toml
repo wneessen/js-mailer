@@ -24,6 +24,7 @@ username = "smtp-user"
 password = "smtp-password"
 timeout = "10s"
 force_tls = true
+dry_run = true
 
 [validation]
 honeypot = "company"
