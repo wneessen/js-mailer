@@ -10,6 +10,7 @@ import (
 	"crypto/sha256"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -28,6 +29,7 @@ import (
 	"github.com/wneessen/js-mailer/internal/config"
 	"github.com/wneessen/js-mailer/internal/forms"
 	"github.com/wneessen/js-mailer/internal/logger"
+	"github.com/wneessen/js-mailer/internal/testhelper"
 )
 
 const testBasePort = 65000
@@ -813,6 +815,104 @@ func TestServer_failsRequiredFields(t *testing.T) {
 	})
 }
 
+func TestServer_validateCaptcha(t *testing.T) {
+	tests := []struct {
+		name       string
+		captchaFn  func(*http.Request) (*http.Response, error)
+		formFn     func(*forms.Form)
+		submission map[string][]string
+		succeeds   bool
+	}{
+		{
+			"private captcha successful response",
+			testResponseFromFile(t, "../../testdata/private_captcha_success.json", http.StatusOK, false),
+			func(form *forms.Form) {
+				form.Validation.PrivateCaptcha.Enabled = true
+			},
+			map[string][]string{
+				privateCaptchaSolutionField: {"private_captcha_token"},
+			},
+			true,
+		},
+		{
+			"private captcha failure response",
+			testResponseFromFile(t, "../../testdata/private_captcha_failure.json", http.StatusUnauthorized, false),
+			func(form *forms.Form) {
+				form.Validation.PrivateCaptcha.Enabled = true
+			},
+			map[string][]string{
+				privateCaptchaSolutionField: {"private_captcha_token"},
+			},
+			false,
+		},
+		{
+			"private captcha http request errors",
+			testResponseFromFile(t, "../../testdata/private_captcha_failure.json", http.StatusUnauthorized, true),
+			func(form *forms.Form) {
+				form.Validation.PrivateCaptcha.Enabled = true
+			},
+			map[string][]string{
+				privateCaptchaSolutionField: {"private_captcha_token"},
+			},
+			false,
+		},
+		{
+			"private captcha succeeds but is negative",
+			testResponseFromFile(t, "../../testdata/private_captcha_success_but_negative.json", http.StatusOK, false),
+			func(form *forms.Form) {
+				form.Validation.PrivateCaptcha.Enabled = true
+			},
+			map[string][]string{
+				privateCaptchaSolutionField: {"private_captcha_token"},
+			},
+			false,
+		},
+		{
+			"private captcha without challange field",
+			testResponseFromFile(t, "../../testdata/private_captcha_success.json", http.StatusUnauthorized, false),
+			func(form *forms.Form) {
+				form.Validation.PrivateCaptcha.Enabled = true
+			},
+			map[string][]string{},
+			false,
+		},
+		{
+			"private captcha with invalid endpoint",
+			testResponseFromFile(t, "../../testdata/private_captcha_success.json", http.StatusUnauthorized, false),
+			func(form *forms.Form) {
+				form.Validation.PrivateCaptcha.Enabled = true
+				form.Validation.PrivateCaptcha.Host = "invalid%"
+			},
+			map[string][]string{
+				privateCaptchaSolutionField: {"private_captcha_token"},
+			},
+			false,
+		},
+	}
+
+	remoteAddr := "127.0.0.1"
+	t.Run("validate captcha against", func(t *testing.T) {
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				server, err := testServer(t, slog.LevelDebug, os.Stderr)
+				if err != nil {
+					t.Fatalf("failed to create test server: %s", err)
+				}
+				form, err := forms.New("../../testdata", "testform_toml")
+				if err != nil {
+					t.Fatalf("failed to load form: %s", err)
+				}
+				tt.formFn(form)
+
+				server.httpClient.Transport = testhelper.MockRoundTripper{Fn: tt.captchaFn}
+				if err = server.validateCaptcha(t.Context(), form, tt.submission, remoteAddr); err != nil && tt.succeeds {
+					t.Errorf("captcha validation failed: %s", err)
+				}
+			})
+		}
+	})
+}
+
 func testServer(t *testing.T, level slog.Level, output io.Writer) (*Server, error) {
 	t.Helper()
 
@@ -831,4 +931,24 @@ func testServer(t *testing.T, level slog.Level, output io.Writer) (*Server, erro
 	}
 
 	return server, nil
+}
+
+func testResponseFromFile(t *testing.T, filename string, code int, fails bool) func(req *http.Request) (*http.Response, error) {
+	t.Helper()
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		t.Fatalf("failed to read file: %s", err)
+	}
+	buf := bytes.NewBuffer(data)
+	return func(req *http.Request) (*http.Response, error) {
+		var resErr error
+		if fails {
+			resErr = errors.New("intentionally failing")
+		}
+		return &http.Response{
+			StatusCode: code,
+			Body:       io.NopCloser(buf),
+			Header:     make(http.Header),
+		}, resErr
+	}
 }
