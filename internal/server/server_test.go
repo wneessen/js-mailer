@@ -717,6 +717,103 @@ func TestResponse_Render(t *testing.T) {
 	})
 }
 
+func TestServer_failsRequiredFields(t *testing.T) {
+	tests := []struct {
+		name        string
+		validations []forms.ValidationField
+		submission  map[string][]string
+		fails       bool
+	}{
+		{
+			"text passes through",
+			[]forms.ValidationField{{Name: "text", Type: "text", Required: true}},
+			map[string][]string{"text": {"hello world"}},
+			false,
+		},
+		{
+			"no valid email format",
+			[]forms.ValidationField{{Name: "email", Type: "email", Required: true}},
+			map[string][]string{"email": {"not@val."}},
+			true,
+		},
+		{
+			"valid email format",
+			[]forms.ValidationField{{Name: "email", Type: "email", Required: true}},
+			map[string][]string{"email": {"valid@example.com"}},
+			false,
+		},
+		{
+			"not a number",
+			[]forms.ValidationField{{Name: "number", Type: "number", Required: true}},
+			map[string][]string{"number": {"text"}},
+			true,
+		},
+		{
+			"is a number",
+			[]forms.ValidationField{
+				{Name: "number", Type: "number", Required: true},
+				{Name: "number2", Type: "number", Required: true},
+				{Name: "number3", Type: "number", Required: true},
+			},
+			map[string][]string{
+				"number":  {"1"},
+				"number2": {"-42"},
+				"number3": {"3.14"},
+			},
+			false,
+		},
+		{
+			"not a boolean",
+			[]forms.ValidationField{{Name: "bool", Type: "bool", Required: true}},
+			map[string][]string{"bool": {"text"}},
+			true,
+		},
+		{
+			"boolean is valid",
+			[]forms.ValidationField{
+				{Name: "bool", Type: "bool", Required: true},
+				{Name: "bool2", Type: "bool", Required: true},
+				{Name: "bool3", Type: "bool", Required: true},
+			},
+			map[string][]string{
+				"bool":  {"1"},
+				"bool2": {"true"},
+				"bool3": {"on"},
+			},
+			false,
+		},
+		{
+			"value does not match",
+			[]forms.ValidationField{{Name: "text", Type: "matchval", Required: true, Value: "expected"}},
+			map[string][]string{"text": {"unexpected"}},
+			true,
+		},
+		{
+			"value matches",
+			[]forms.ValidationField{{Name: "text", Type: "matchval", Required: true, Value: "expected"}},
+			map[string][]string{"text": {"expected"}},
+			false,
+		},
+	}
+
+	t.Run("checking required fields", func(t *testing.T) {
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				server, err := testServer(t, slog.LevelDebug, os.Stderr)
+				if err != nil {
+					t.Fatalf("failed to create test server: %s", err)
+				}
+
+				fails, _ := server.failsRequiredFields(tt.validations, tt.submission)
+				if fails != tt.fails {
+					t.Errorf("expected fails to be %t, got: %t", tt.fails, fails)
+				}
+
+			})
+		}
+	})
+}
+
 func testServer(t *testing.T, level slog.Level, output io.Writer) (*Server, error) {
 	t.Helper()
 
