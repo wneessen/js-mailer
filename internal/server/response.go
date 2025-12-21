@@ -6,26 +6,21 @@ package server
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/render"
 )
 
 type Response struct {
-	Success    bool          `json:"success"`
-	StatusCode int           `json:"statusCode"`
-	Status     string        `json:"status"`
-	Message    string        `json:"message,omitempty"`
-	Timestamp  time.Time     `json:"timestamp"`
-	RequestID  string        `json:"requestId,omitempty"`
-	Data       any           `json:"data,omitempty"`
-	Errors     []ErrorDetail `json:"errors,omitempty"`
-}
-
-type ErrorDetail struct {
-	Field   string `json:"field,omitempty"` // e.g. "email"
-	Code    string `json:"code"`            // e.g. "invalid_format"
-	Message string `json:"message"`         // user-facing error text
+	Success    bool      `json:"success"`
+	StatusCode int       `json:"statusCode"`
+	Status     string    `json:"status"`
+	Message    string    `json:"message,omitempty"`
+	Timestamp  time.Time `json:"timestamp"`
+	RequestID  string    `json:"requestId,omitempty"`
+	Data       any       `json:"data,omitempty"`
+	Errors     []string  `json:"errors,omitempty"`
 }
 
 // Render satisfies the go-chi render.Renderer interface.
@@ -48,4 +43,32 @@ func NewResponse(code int, msg string, data any) *Response {
 		Timestamp:  time.Now().UTC(),
 		Data:       data,
 	}
+}
+
+func NewErrResponse(code int, err error) render.Renderer {
+	errList := append([]string{}, strings.Split(err.Error(), "\n")...)
+	return &Response{
+		Success:    false,
+		StatusCode: code,
+		Status:     http.StatusText(code),
+		Message:    "request could not be processed",
+		Timestamp:  time.Now().UTC(),
+		Errors:     errList,
+	}
+}
+
+func ErrBadRequest(err error) render.Renderer {
+	return NewErrResponse(http.StatusBadRequest, err)
+}
+
+func ErrForbidden(err error) render.Renderer {
+	return NewErrResponse(http.StatusForbidden, err)
+}
+
+func ErrNotFound(err error) render.Renderer {
+	return NewErrResponse(http.StatusNotFound, err)
+}
+
+func ErrUnexpected(err error) render.Renderer {
+	return NewErrResponse(http.StatusInternalServerError, err)
 }

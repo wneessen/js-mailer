@@ -15,9 +15,9 @@ import (
 	"github.com/go-chi/httplog/v3"
 )
 
-func (s *Server) routes(_ context.Context) error {
+func (s *Server) routes(_ context.Context) {
 	logFormat := httplog.SchemaECS
-	logSkipPath := []string{"/skip"}
+	logSkipPath := []string{"/ping"}
 	logger := s.log.With(slog.String("service", "http"))
 	logHandler := httplog.RequestLogger(
 		logger,
@@ -52,6 +52,4 @@ func (s *Server) routes(_ context.Context) error {
 		r.Post("/", s.HandlerAPISendFormPost)
 		r.Options("/", s.HandlerAPISendFormPost)
 	})
-
-	return nil
 }

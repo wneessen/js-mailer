@@ -6,11 +6,10 @@ package server
 
 import (
 	"crypto/sha256"
+	"errors"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -24,7 +23,10 @@ const (
 	encodingMPFormData = "multipart/form-data"
 )
 
-var ErrDomainNotAllowed = fmt.Errorf("domain not allowed")
+var (
+	ErrNoFormID         = errors.New("missing form ID")
+	ErrDomainNotAllowed = fmt.Errorf("domain not allowed")
+)
 
 // TokenResponse is the JSON response struct for the token endpoint
 type TokenResponse struct {
@@ -40,7 +42,7 @@ type TokenResponse struct {
 func (s *Server) HandlerAPITokenGet(w http.ResponseWriter, r *http.Request) {
 	formID := chi.URLParam(r, "formID")
 	if formID == "" {
-		_ = render.Render(w, r, ErrBadRequest(fmt.Errorf("missing form ID")))
+		_ = render.Render(w, r, ErrBadRequest(ErrNoFormID))
 		return
 	}
 
@@ -58,21 +60,6 @@ func (s *Server) HandlerAPITokenGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	allowedDomain := false
-	for _, domain := range form.Domains {
-		if strings.EqualFold(origin, fmt.Sprintf("https://%s", domain)) {
-			allowedDomain = true
-			break
-		}
-	}
-	if !allowedDomain {
-		s.log.Error("domain not allowed", slog.String("origin", origin), slog.String("form", form.ID),
-			slog.Any("allowed_domains", form.Domains))
-		_ = render.Render(w, r, ErrForbidden(ErrDomainNotAllowed))
-		return
-	}
-	w.Header().Set("Access-Control-Allow-Origin", origin)
-
 	schema := "http"
 	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
 		schema = "https"
@@ -83,10 +70,10 @@ func (s *Server) HandlerAPITokenGet(w http.ResponseWriter, r *http.Request) {
 	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(value)))
 	token := &TokenResponse{
 		Token:      hash,
-		FormID:     form.ID,
+		FormID:     formID,
 		CreateTime: now.Unix(),
 		ExpireTime: expire.Unix(),
-		URL: fmt.Sprintf("%s://%s/send/%s/%s", schema, r.Host, url.QueryEscape(form.ID),
+		URL: fmt.Sprintf("%s://%s/send/%s/%s", schema, r.Host, url.QueryEscape(formID),
 			url.QueryEscape(hash)),
 		Encoding:  encodingMPFormData,
 		ReqMethod: http.MethodPost,

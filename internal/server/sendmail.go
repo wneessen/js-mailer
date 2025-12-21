@@ -23,6 +23,11 @@ var (
 )
 
 func (s *Server) sendMail(r *http.Request, form *forms.Form) (string, string, error) {
+	if form.Server.DryRun {
+		s.log.Info("dry-run mode enabled, skipping actual mail delivery")
+		return "dry-run succeeded", "dry-run succeeded", nil
+	}
+
 	var confirmationResponse, messageResponse string
 
 	// Initialize mail client

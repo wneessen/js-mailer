@@ -32,8 +32,11 @@ func New(cleanupInterval time.Duration) *Cache {
 		ttl:   cleanupInterval,
 		stop:  make(chan struct{}),
 	}
-	go c.cleanupLoop(cleanupInterval)
 	return c
+}
+
+func (c *Cache) Start() {
+	go c.cleanupLoop(c.ttl)
 }
 
 // Set stores a value without TTL.

@@ -20,22 +20,21 @@ import (
 	"github.com/wneessen/js-mailer/internal/logger"
 )
 
-const (
-	// DefaultTimeout is the default timeout value for the HTTPClient
-	DefaultTimeout = time.Second * 10
-)
+// DefaultTimeout is the default timeout value for the HTTPClient
+const DefaultTimeout = time.Second * 10
 
 var (
 	// version is the version of the application (will be set at build time)
 	version = "dev"
-	// UserAgent is the User-Agent that the HTTP client sends with API requests
 
+	// UserAgent is the User-Agent that the HTTP client sends with API requests
 	UserAgent = fmt.Sprintf("Mozilla/5.0 (%s; %s) js-mailer/%s (+https://github.com/wneessen/js-mailer)",
 		runtime.GOOS,
 		runtime.GOARCH,
 		version,
 	)
 
+	// ErrNonPointerTarget is returned when the target is not a pointer
 	ErrNonPointerTarget = errors.New("target must be a non-nil pointer")
 )
 

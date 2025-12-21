@@ -33,7 +33,6 @@ type Config struct {
 		BindPort      string        `fig:"port" default:"8765"`
 		CacheLifetime time.Duration `fig:"cache_lifetime" default:"10m"`
 		Timeout       time.Duration `fig:"timeout" default:"15s"`
-		RequestLimit  string        `fig:"request_limit" default:"10M"`
 	} `fig:"server"`
 }
 

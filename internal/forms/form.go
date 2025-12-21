@@ -39,8 +39,8 @@ type Form struct {
 		Port     int    `fig:"port" default:"25"`
 		Username string
 		Password string
-		Timeout  string `fig:"timeout" default:"5s"`
-		ForceTLS bool   `fig:"force_tls"`
+		ForceTLS bool `fig:"force_tls"`
+		DryRun   bool `fig:"dry_run"`
 	}
 	Validation struct {
 		Fields   []ValidationField `fig:"fields"`
