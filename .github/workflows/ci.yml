@@ -78,6 +78,8 @@ jobs:
     test:
         name: Test (${{ matrix.os }} / ${{ matrix.go }})
         runs-on: ${{ matrix.os }}
+        env:
+          JSMAILER_FORMS_PATH: ${{ vars.JSMAILER_FORMS_PATH }}
         strategy:
             fail-fast: false
             matrix:
@@ -117,6 +119,7 @@ jobs:
         runs-on: ${{ matrix.os }}
         env:
           PERFORM_INTEGRATION_TEST: ${{ vars.PERFORM_INTEGRATION_TEST }}
+          JSMAILER_FORMS_PATH: ${{ vars.JSMAILER_FORMS_PATH }}
         concurrency:
             group: ci-codecov-${{ matrix.os }}-${{ matrix.go }}
             cancel-in-progress: true
