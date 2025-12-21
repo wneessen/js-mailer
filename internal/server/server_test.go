@@ -941,6 +941,59 @@ func TestServer_validateCaptcha(t *testing.T) {
 			map[string][]string{},
 			false,
 		},
+		{
+			"turnstile successful response",
+			testResponseFromFile(t, "../../testdata/turnstile_success.json", http.StatusOK, false),
+			func(form *forms.Form) {
+				form.Validation.Turnstile.Enabled = true
+			},
+			map[string][]string{
+				turnstileSolutionField: {"turnstile_token"},
+			},
+			true,
+		},
+		{
+			"turnstile successful request but negative solution",
+			testResponseFromFile(t, "../../testdata/turnstile_success_but_negative.json", http.StatusOK, false),
+			func(form *forms.Form) {
+				form.Validation.Turnstile.Enabled = true
+			},
+			map[string][]string{
+				turnstileSolutionField: {"turnstile_token"},
+			},
+			false,
+		},
+		{
+			"turnstile failure response",
+			testResponseFromFile(t, "../../testdata/turnstile_failure.json", http.StatusUnauthorized, false),
+			func(form *forms.Form) {
+				form.Validation.Turnstile.Enabled = true
+			},
+			map[string][]string{
+				turnstileSolutionField: {"turnstile_token"},
+			},
+			false,
+		},
+		{
+			"turnstile fails http request",
+			testResponseFromFile(t, "../../testdata/turnstile_failure.json", http.StatusUnauthorized, true),
+			func(form *forms.Form) {
+				form.Validation.Turnstile.Enabled = true
+			},
+			map[string][]string{
+				turnstileSolutionField: {"turnstile_token"},
+			},
+			false,
+		},
+		{
+			"turnstile solution field is missing",
+			testResponseFromFile(t, "../../testdata/turnstile_failure.json", http.StatusUnauthorized, false),
+			func(form *forms.Form) {
+				form.Validation.Turnstile.Enabled = true
+			},
+			map[string][]string{},
+			false,
+		},
 	}
 
 	remoteAddr := "127.0.0.1"
