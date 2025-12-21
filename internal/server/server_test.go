@@ -808,7 +808,6 @@ func TestServer_failsRequiredFields(t *testing.T) {
 				if fails != tt.fails {
 					t.Errorf("expected fails to be %t, got: %t", tt.fails, fails)
 				}
-
 			})
 		}
 	})
