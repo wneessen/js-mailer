@@ -1,0 +1,9 @@
+{
+  "success": false,
+  "challenge_ts": "2025-12-21T10:20:30Z",
+  "hostname": "example.com",
+  "credit": true,
+  "error-codes": [],
+  "score": 0.92,
+  "score_reason": ["human_interaction", "trusted_environment"]
+}
