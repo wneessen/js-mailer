@@ -24,6 +24,7 @@ const (
 func TestNew(t *testing.T) {
 	t.Run("the default config is returned", func(t *testing.T) {
 		t.Setenv("HOME", "../../testdata")
+		t.Setenv("JSMAILER_FORMS_PATH", "../../testdata")
 		config, err := New()
 		if err != nil {
 			t.Fatalf("failed to create config: %s", err)
@@ -34,8 +35,8 @@ func TestNew(t *testing.T) {
 		if config.Log.Format != "json" {
 			t.Errorf("expected log format to be %s, got %s", testLogFormat, config.Log.Format)
 		}
-		if config.Forms.Path != "testdata" {
-			t.Errorf("expected forms path to be %s, got %s", testFormsPath, config.Forms.Path)
+		if config.Forms.Path != "../../testdata" {
+			t.Errorf("expected forms path to be %s, got %s", "../../testdata", config.Forms.Path)
 		}
 		if config.Forms.DefaultExpiration != testFormsDefaultExpiration {
 			t.Errorf("expected forms default expiration to be %s, got %s", testFormsDefaultExpiration,
@@ -58,6 +59,7 @@ func TestNew(t *testing.T) {
 	})
 	t.Run("config without a home directory", func(t *testing.T) {
 		t.Setenv("HOME", "")
+		t.Setenv("JSMAILER_FORMS_PATH", "")
 		_, err := New()
 		if err == nil {
 			t.Fatal("expected error when no home directory is set")
@@ -72,6 +74,7 @@ func TestNew(t *testing.T) {
 		})
 
 		t.Setenv("HOME", tempDir)
+		t.Setenv("JSMAILER_FORMS_PATH", "")
 		_, err := New()
 		if err == nil {
 			t.Fatal("expected error when no home directory is set")
