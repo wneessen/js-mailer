@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: Winni Neessen <wn@neessen.dev>
 SPDX-License-Identifier: MIT
 -->
 
-# JS-Mailer - Form mailer for JavaScript-based websites
+# JS-Mailer - form mailer for JavaScript-based websites
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/wneessen/js-mailer)](https://goreportcard.com/report/github.com/wneessen/js-mailer) [![Build Status](https://api.cirrus-ci.com/github/wneessen/js-mailer.svg)](https://cirrus-ci.com/github/wneessen/js-mailer) <a href="https://ko-fi.com/D1D24V9IX"><img src="https://uploads-ssl.webflow.com/5c14e387dab576fe667689cf/5cbed8a4ae2b88347c06c923_BuyMeACoffee_blue.png" height="20" alt="buy ma a coffee"></a>
 
@@ -16,16 +16,17 @@ API that can be accessed via JavaScript `Fetch()` or `XMLHttpRequest`.
 * Single-binary webservice
 * Multi-form support
 * Multiple recipients per form
-* Only display form-fields that are configured in for the form in the resulting mail
+* Only display form-fields that are configured for the form in the resulting mail
 * Check for required form fields
 * Anti-SPAM functionality via built-in, auto-expiring and single-use security token feature
 * Anti-SPAM functionality via honeypot fields
 * Limit form access to specific domains
 * Per-form mail server configuration
 * hCaptcha support
-* reCaptcha v2 support
+* reCaptcha v2 (Checkbox) support
 * Turnstile support
-* Form field type validation (text, email, number, bool)
+* Private Captcha support
+* Form field type validation (text, email, number, boolean, matchvalue)
 * Confirmation mail to poster
 * Custom Reply-To header based on sending mail address
 
@@ -51,239 +52,235 @@ There is a ready-to-use Docker image hosted on Github.
 
 ### Server configuration
 
-The server configuration, by default, is searched for in `/etc/js-mailer/js-mailer.json`. The JSON syntax is very basic
-and comes with sane defaults.
+The service, by default, searches for its configuration file in `$HOME/.config/js-mailer/`. In there it
+will look for a file named `js-mailer.ext` where `ext` is one of `json`, `toml` or `yaml`.
+The config format is very simple and looks like this:
+```toml
+[log]
+# Log level (slog): -4=DEBUG, 0=INFO, 4=WARN, 8=ERROR
+level = 0
+format = "json"
 
-```json
-{
-  "forms": {
-    "path": "/etc/js-mailer/forms",
-    "maxlength": "10M"
-  },
-  "loglevel": "debug",
-  "server": {
-    "bind_addr": "0.0.0.0",
-    "port": 8765,
-    "timeout": "15s"
-  }
-}
+[forms]
+# Directory where form definitions are stored
+path = "/var/lib/app/forms"
+
+# Default expiration for generated forms
+default_expiration = "10m"
+
+[server]
+# Address and port the HTTP server binds to
+address = "127.0.0.1"
+port = "8765"
+
+# Cache lifetime for captcha / form responses
+cache_lifetime = "10m"
+
+# Request timeout
+timeout = "15s"
 ```
-
-* `server (type: struct)`: The struct for the web api configuration
-    * `bind_addr (type: string)`: The IP address to bind the web service to
-    * `port (type: uint)`: The port for the webservice to listen on
-    * `timeout (type: time.Duration)`: The duration a request can take at max.
-* `forms (type: struct)`: The struct for the forms configuration
-    * `path (type: string)`: The path in which `js-mailer` will look for form configuration JSON files
-    * `maxlength (type: string)`: Maximum size of the request body (default: "10M")
-* `loglevel (type: string)`: The log level for the web service
 
 ### Form configuration
 
-Each form has its own configuration file. The configuration is searched in the forms path and are named by its id. Again
-the JSON syntax of the form configuration is very simple, yet flexible.
+Each form has its own configuration file. The configuration is searched for in the forms path that has been defined in
+the configuration file. The form configuration file must be named `<formid>.ext` where `<formid>` is the form id and
+`ext` is one of `json`, `toml` or `yaml`.
+Equivalent to the server configuration, the form configuration file format is very simple and looks like this:
+```toml
+# Unique form identifier
+id = "contact_form"
+
+# Domains allowed to submit this form
+domains = ["example.com", "www.example.com"]
+
+# Email recipients for form submissions
+recipients = ["support@example.com"]
+
+# Sender address used for outgoing emails
+sender = "no-reply@example.com"
+
+# Shared secret used for form token generation
+secret = "super-secret-value"
+
+# Mail content configuration
+[content]
+subject = "New contact form submission"
+fields = ["name", "email", "message"]
+
+# Confirmation mail configuration
+[confirmation]
+enabled = true
+rcpt_field = "email"
+subject = "We received your message"
+content = "Thank you for contacting us. We will get back to you shortly."
+
+# Form Reply-To address configuration
+[reply_to]
+field = "email"
+
+# Mail server configuration
+[server]
+host = "smtp.example.com"
+port = 587
+username = "smtp-user"
+password = "smtp-password"
+force_tls = true
+dry_run = false
+
+# Form validation configuration
+[validation]
+honeypot = "company"
+
+# Form field validation configuration
+[[validation.fields]]
+name = "name"
+required = true
+type = "string"
+
+[[validation.fields]]
+name = "email"
+required = true
+type = "email"
+
+[[validation.fields]]
+name = "message"
+required = true
+type = "string"
+
+# Form captcha providers configuration
+[validation.hcaptcha]
+enabled = false
+secret_key = ""
+
+[validation.recaptcha]
+enabled = true
+secret_key = "recaptcha-secret-key"
+
+[validation.turnstile]
+enabled = false
+secret_key = ""
+
+[validation.private_captcha]
+enabled = false
+host = "captcha.internal.example"
+api_key = "private-captcha-api-key"
+```
+
+## Workflow
+
+`JS-Mailer` follows a two-step workflow. First your JavaScript requests a token from the API using the `/token`
+endpoint. If the request is valid and website is authorized to request a token, this endpoint returns all information 
+required by your HTML form and JavaScript to submit form data to the API.
+
+Use the values from the response as follows:
+
+- Set the form’s `action` attribute to the value of `data.url`
+- Set the form’s `method` attribute to `POST` (from `data.request_method`)
+- Set the form’s `enctype` attribute to the value of `data.encoding`
+
+Once the form is submitted, the API validates the sender token, checks all submitted fields against the configured
+form validation rules, and—if validation succeeds—delivers the form data to the configured recipients using the
+configured mail server.
+
+The sender token is bound to the form (`data.form_id`) and is only valid within the time window defined by
+`data.create_time` and `data.expire_time`. Submissions using expired or invalid tokens will be rejected.
+
+### Example response
 
 ```json
 {
-  "id": "test_form",
-  "secret": "SuperSecretsString",
-  "recipients": [
-    "who@cares.net"
-  ],
-  "sender": "website@example.com",
-  "domains": [
-    "www.example.com",
-    "example.com"
-  ],
-  "content": {
-    "subject": "New message through the www.example.com contact form",
-    "fields": [
-      "name",
-      "email",
-      "message"
-    ]
-  },
-  "replyto": {
-    "field": "email"
-  },
-  "confirmation": {
-    "enabled": true,
-    "rcpt_field": "email",
-    "subject": "Thank you for your message",
-    "content": "We have received your message via www.example.com and will tough base with you, shortly."
-  },
-  "validation": {
-    "hcaptcha": {
-      "enabled": true,
-      "secret_key": "0x01234567890"
-    },
-    "recaptcha": {
-      "enabled": true,
-      "secret_key": "0x01234567890"
-    },
-    "turnstile": {
-      "enabled": true,
-      "secret_key": "0x01234567890"
-    },
-    "honeypot": "street",
-    "fields": [
-      {
-        "name": "name",
-        "type": "text",
-        "required": true
-      },
-      {
-        "name": "mail_addr",
-        "type": "email",
-        "required": true
-      },
-      {
-        "name": "terms_checked",
-        "type": "matchval",
-        "value": "on",
-        "required": true
-      }
-    ]
-  },
-  "server": {
-    "host": "mail.example.com",
-    "port": 25,
-    "username": "website@example.com",
-    "password": "verySecurePassword",
-    "timeout": "5s",
-    "force_tls": true
+  "success": true,
+  "statusCode": 201,
+  "status": "Created",
+  "message": "sender token successfully created",
+  "timestamp": "2025-12-21T17:56:22.867942901Z",
+  "data": {
+    "token": "cb8620734dd48c81d843be9c70d32b546643e0aff64c79ba195aa90db0b55059",
+    "form_id": "test_form",
+    "create_time": 1766339782,
+    "expire_time": 1766340382,
+    "url": "https://jsmailer.example.internal/send/test_form/cb8620734dd48c81d843be9c70d32b546643e0aff64c79ba195aa90db0b55059",
+    "encoding": "multipart/form-data",
+    "request_method": "POST"
   }
 }
 ```
 
-* `id (type: string)`: The id of the form (will be looked for in the `formid` parameter of the token request)
-* `secret (type: string)`: Secret for the form. This will be used for the token generation
-* `recipients (type: []string)`: List of recipients, that should receive the mails with the submitted form data
-* `domains (type: []string)`: List of origin domains, that are allowed to use this form
-* `content (type: struct)`: The struct for the mail content configuration
-    * `subject (type: string)`: Subject for the mail notification of the form submission
-    * `fields (type: []string)`: List of field names that should show up in the mail notification
-* `confirmation (type: struct)`: The struct for the mail confirmail mail configuration
-    * `enabled (type: boolean)`: If true, the confirmation mail will be sent
-    * `rcpt_field (type: string)`: Name of the form field holding the confirmation mail recipient
-    * `subject (type: string)`: Subject for the confirmation mail
-    * `content (type: string)`: Content for the confirmation mail
-      * `fields (type: []string)`: List of field names that should show up in the mail notification
-* `validation (type: struct)`: The struct for the form validation configuration
-    * `hcaptcha (type: struct)`: The struct for the forms hCaptcha configuration
-        * `enabled (type: bool)`: Enable hCaptcha challenge-response validation
-        * `secret_key (type: string)`: Your hCaptcha secret key
-    * `recaptcha (type: struct)`: The struct for the forms reCaptcha configuration
-        * `enabled (type: bool)`: Enable reCaptcha challenge-response validation
-        * `secret_key (type: string)`: Your reCaptcha secret key
-    * `turnstile (type: struct)`: The struct for the forms Turnstile configuration
-      * `enabled (type: bool)`: Enable Turnstile challenge-response validation
-      * `secret_key (type: string)`: Your Turnstile secret key
-    * `honeypot (type: string)`: Name of the honeypot field, that is expected to be empty (Anti-SPAM)
-    * `fields (type: []struct)`: Array of single field validation configurations
-        * `name (type: string)`: Field validation identifier
-        * `type (type: string)`: Type of validation to run on field (text, email, nummber, bool)
-        * `required (type: boolean)`: If set to true, the field is required
-* `replyto (type: struct)`: The struct for the reply to configuration
-    * `rcpt_field (type: string)`: Name of the form field holding the reply-to mail sender address
-* `server (type: struct)`: The struct for the forms mail server configuration
-    * `host (type: string)`: Hostname of the sending mail server
-    * `port (type: uint32)`: Port to connect to on the sending mail server
-    * `username (type: string)`: Username for the mail server authentication
-    * `password (type: string)`: Password for the mail server authentication
-    * `timeout (type: duration)`: Timeout duration for the mail server connection
-    * `force_tls (type: boolean)`: If set to true, the mail server connection will require mandatory TLS
+## API Response Format
 
-## Workflow
+All API endpoints return a JSON response that follows a consistent, envelope-based format. This ensures predictable
+handling of both successful and failed requests across the entire API.
 
-`JS-Mailer` follows a two-step workflow. First your JavaScript requests a token from the API using the `/api/v1/token`
-endpoint. If the request is valid and website is authorized to request a token, the API will respond with a
-TokenResponseJson. This holds some data, which needs to be included into your form as hidden inputs. It will also
-provide a submission URL endpoint `/api/v1/send/<formid>/<token>` that can be used as action in your form. Once the form
-is submitted, the API will then validate that all submitted data is correct and submit the form data to the configured
-recipients.
+### Response Object
 
-## API responses
+| Field        | Type                | Description                                                            |
+|--------------|---------------------|------------------------------------------------------------------------|
+| `success`    | `boolean`           | Indicates whether the request was processed successfully.              |
+| `statusCode` | `number`            | HTTP status code associated with the response.                         |
+| `status`     | `string`            | Human-readable HTTP status text (e.g. `OK`, `Created`, `Bad Request`). |
+| `message`    | `string`            | Optional short description of the result.                              |
+| `timestamp`  | `string` (RFC 3339) | Server-side timestamp indicating when the response was generated.      |
+| `requestId`  | `string`            | Optional unique identifier for request tracing and debugging.          |
+| `data`       | `object`            | Optional endpoint-specific response payload.                           |
+| `errors`     | `string[]`          | Optional list of error messages describing why the request failed.     |
 
-The API basically responds with two different types of JSON objects. A `success` response or an `error` response.
+### Successful Response
 
-### Success response
+A successful request has the following characteristics:
 
-The succss response JSON struct is very simple:
+- `success` is `true`
+- `statusCode` is a 2xx HTTP status code
+- `data` contains the endpoint-specific payload
+- `errors` is omitted
+
+#### Example
 
 ```json
 {
-  "status_code": 200,
-  "status": "Ok",
-  "data": {}
+  "success": true,
+  "statusCode": 200,
+  "status": "OK",
+  "message": "request processed successfully",
+  "timestamp": "2025-12-21T18:10:00Z",
+  "data": {
+    "result": "example"
+  }
 }
 ```
 
-* `status_code (type: uint32)`: The HTTP status code of the success response
-* `status (type: string)`: The HTTP status string of the success response
-* `data (type: object)`: An object with abritrary data, based on the type of response
+### Error Response
 
-#### Successful token retrieval data object
+A failed request returns structured error information:
 
-The `data` object of the success response for a successful token retrieval looks like this:
+- `success` is `false`
+- `statusCode` is a 4xx or 5xx HTTP status code
+- `errors` contains one or more descriptive error messages
+- `data` is omitted
+
+#### Example
 
 ```json
 {
-  "token": "5b19fca2b154a2681f8d6014c63b5f81bdfdd01036a64f8a835465ab5247feff",
-  "form_id": "test_form",
-  "create_time": 1628670201,
-  "expire_time": 1628670801,
-  "url": "https://jsmailer.example.com/api/v1/send/test_form/5b19fca2b154a2681f8d6014c63b5f81bdfdd01036a64f8a835465ab5247feff",
-  "enc_type": "multipart/form-data",
-  "method": "post"
+  "success": false,
+  "statusCode": 400,
+  "status": "Bad Request",
+  "message": "validation failed",
+  "timestamp": "2025-12-21T18:11:00Z",
+  "errors": [
+    "email is required",
+    "captcha verification failed"
+  ]
 }
 ```
 
-* `token (type: string)`: The security token of this send request
-* `form_id (type: string)`: The form id of the current form (for reference or automatic inclusion via JS)
-* `create_time (type: int64)`: The epoch timestamp when the token was created
-* `expire_time (type: int64)`: The epoch timestamp when the token will expire
-* `url (type: string)`: API endpoint to set your form action to
-* `enc_type (type: string)`: The enctype for your form
-* `method (type: string)`: The method for your form
+### Client Guidelines
 
-#### Sent successful data object
+- Always check `success` before processing `data`.
+- Use `statusCode` for programmatic error handling.
+- Treat `message` as informational and not machine-readable.
+- Do not assume optional fields are present.
 
-The `data` object of the success response for a successfully sent message looks like this:
-
-The API response to a send request (`/api/v1/send/<formid>/<token>`) looks like this:
-
-```json
-{
-  "form_id": "test_form",
-  "send_time": 1628670331,
-  "confirmation_sent": true,
-  "confirmation_rcpt": "toni.tester@example.com"
-}
-```
-
-* `form_id (type: string)`: The form id of the current form (for reference)
-* `send_time (type: int64)`: The epoch timestamp when the message was sent
-* `confirmation_sent (type: boolean)`: Is set to true, if a confirmation was sent successfully
-* `confirmation_rcpt (type: string)`: The recipient mail address that the confirmation was sent to
-
-### Error response
-
-The error response JSON struct is also very simple:
-
-```json
-{
-  "status_code": 404,
-  "status": "Not Found",
-  "error_message": "Validation failed",
-  "error_data": "Not a valid send URL"
-}
-```
-
-* `status_code (type: uint32)`: The HTTP status code of the success response
-* `status (type: string)`: The HTTP status string of the success response
-* `error_message (type: string)`: The general error message why this request failed
-* `error_data (type: interface{})`: Optional details in addtion to the error message (i. e. missing fields)
+This unified response format enables consistent client-side handling and simplified API integrations.
 
 ## Example implementation
 
