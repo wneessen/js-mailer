@@ -281,8 +281,3 @@ A failed request returns structured error information:
 - Do not assume optional fields are present.
 
 This unified response format enables consistent client-side handling and simplified API integrations.
-
-## Example implementation
-
-A very basic HTML/JS example implementation for the `JS-Mailer` system can be found in
-the [code-example](code-examples/) directory
