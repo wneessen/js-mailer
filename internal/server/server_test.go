@@ -7,6 +7,7 @@ package server
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -25,6 +26,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/wneessen/js-mailer/internal/config"
+	"github.com/wneessen/js-mailer/internal/forms"
 	"github.com/wneessen/js-mailer/internal/logger"
 )
 
@@ -510,79 +512,193 @@ func TestServer_HandlerAPISendFormPost(t *testing.T) {
 			t.Errorf("expected message response %s, got: %s", wantStatus, resp.Data.MessageResponse)
 		}
 	})
-	t.Run("sending form without a form id", func(t *testing.T) {
-		server, err := testServer(t, slog.LevelDebug, io.Discard)
+	t.Run("sending form fails on", func(t *testing.T) {
+		origin := "https://example.com"
+		tokenCreatedAt := time.Now()
+		tokenExpiresAt := tokenCreatedAt.Add(time.Hour)
+
+		form, err := forms.New("../../testdata", "testform_toml")
 		if err != nil {
-			t.Fatalf("failed to create test server: %s", err)
+			t.Fatalf("failed to create form: %s", err)
 		}
-		server.config.Forms.Path = "../../testdata"
+		hasher := sha256.New()
+		value := fmt.Sprintf("%s_%d_%d_%s_%s", origin, tokenCreatedAt.UnixNano(),
+			tokenExpiresAt.UnixNano(), form.ID, form.Secret)
+		hasher.Write([]byte(value))
+		computedHash := fmt.Sprintf("%x", hasher.Sum(nil))
 
-		router := chi.NewRouter()
-		router.With(server.preflightCheck).Post("/send/{hash}", server.HandlerAPISendFormPost)
-
-		buf := bytes.NewBuffer(nil)
-		writer := multipart.NewWriter(buf)
-		_ = writer.WriteField("email", "example@example.com")
-		_ = writer.WriteField("message", "this is a test message")
-		_ = writer.Close()
-		req := httptest.NewRequest(http.MethodPost, "/send/invalidhash", buf)
-		req.Header.Set("Content-Type", writer.FormDataContentType())
-		req.TLS = &tls.ConnectionState{}
-		req.Header.Set("Origin", "https://example.com")
-		recorder := httptest.NewRecorder()
-		router.ServeHTTP(recorder, req)
-		if recorder.Code != http.StatusBadRequest {
-			t.Errorf("expected status code %d, got: %d", http.StatusBadRequest, recorder.Code)
+		tests := []struct {
+			name     string
+			routerFn func(*Server, chi.Router)
+			reqFn    func(string) *http.Request
+			code     int
+		}{
+			{
+				"short hash",
+				func(server *Server, router chi.Router) {
+					router.With(server.preflightCheck).Post("/send/{formID}/{hash}", server.HandlerAPISendFormPost)
+				},
+				func(string) *http.Request {
+					buf := bytes.NewBuffer(nil)
+					writer := multipart.NewWriter(buf)
+					_ = writer.WriteField("email", "example@example.com")
+					_ = writer.WriteField("message", "this is a test message")
+					_ = writer.Close()
+					req := httptest.NewRequest(http.MethodPost, "/send/testform_toml/9f86d081", buf)
+					req.Header.Set("Content-Type", writer.FormDataContentType())
+					req.TLS = &tls.ConnectionState{}
+					req.Header.Set("Origin", origin)
+					return req
+				},
+				http.StatusBadRequest,
+			},
+			{
+				"invalid hash",
+				func(server *Server, router chi.Router) {
+					router.With(server.preflightCheck).Post("/send/{formID}/{hash}", server.HandlerAPISendFormPost)
+				},
+				func(string) *http.Request {
+					buf := bytes.NewBuffer(nil)
+					writer := multipart.NewWriter(buf)
+					_ = writer.WriteField("email", "example@example.com")
+					_ = writer.WriteField("message", "this is a test message")
+					_ = writer.Close()
+					req := httptest.NewRequest(http.MethodPost, "/send/testform_toml/invalidhash", buf)
+					req.Header.Set("Content-Type", writer.FormDataContentType())
+					req.TLS = &tls.ConnectionState{}
+					req.Header.Set("Origin", origin)
+					return req
+				},
+				http.StatusBadRequest,
+			},
+			{
+				"no form id given",
+				func(server *Server, router chi.Router) {
+					router.With(server.preflightCheck).Post("/send/{hash}", server.HandlerAPISendFormPost)
+				},
+				func(string) *http.Request {
+					buf := bytes.NewBuffer(nil)
+					writer := multipart.NewWriter(buf)
+					_ = writer.WriteField("email", "example@example.com")
+					_ = writer.WriteField("message", "this is a test message")
+					_ = writer.Close()
+					req := httptest.NewRequest(http.MethodPost, "/send/invalidhash", buf)
+					req.Header.Set("Content-Type", writer.FormDataContentType())
+					req.TLS = &tls.ConnectionState{}
+					req.Header.Set("Origin", origin)
+					return req
+				},
+				http.StatusBadRequest,
+			},
+			{
+				"form does not exist",
+				func(server *Server, router chi.Router) {
+					router.With(server.preflightCheck).Post("/send/{formID}/{hash}", server.HandlerAPISendFormPost)
+				},
+				func(string) *http.Request {
+					buf := bytes.NewBuffer(nil)
+					writer := multipart.NewWriter(buf)
+					_ = writer.WriteField("message", "this is a test message")
+					_ = writer.WriteField("email", "example@example.com")
+					_ = writer.Close()
+					req := httptest.NewRequest(http.MethodPost, "/send/form_not_existing/9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08", buf)
+					req.Header.Set("Content-Type", writer.FormDataContentType())
+					req.TLS = &tls.ConnectionState{}
+					req.Header.Set("Origin", origin)
+					return req
+				},
+				http.StatusNotFound,
+			},
+			{
+				"hash does not match",
+				func(server *Server, router chi.Router) {
+					router.With(server.preflightCheck).Post("/send/{formID}/{hash}", server.HandlerAPISendFormPost)
+					server.cache.Set("9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08", &forms.Form{}, time.Now(), time.Now().Add(time.Minute))
+				},
+				func(string) *http.Request {
+					buf := bytes.NewBuffer(nil)
+					writer := multipart.NewWriter(buf)
+					_ = writer.WriteField("message", "this is a test message")
+					_ = writer.WriteField("email", "example@example.com")
+					_ = writer.Close()
+					req := httptest.NewRequest(http.MethodPost, "/send/testform_toml/9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08", buf)
+					req.Header.Set("Content-Type", writer.FormDataContentType())
+					req.TLS = &tls.ConnectionState{}
+					req.Header.Set("Origin", origin)
+					return req
+				},
+				http.StatusNotFound,
+			},
+			{
+				"no submission data",
+				func(server *Server, router chi.Router) {
+					router.With(server.preflightCheck).Post("/send/{formID}/{hash}", server.HandlerAPISendFormPost)
+				},
+				func(hash string) *http.Request {
+					req := httptest.NewRequest(http.MethodPost, "/send/testform_toml/"+hash, nil)
+					req.TLS = &tls.ConnectionState{}
+					req.Header.Set("Origin", origin)
+					return req
+				},
+				http.StatusInternalServerError,
+			},
+			{
+				"honeypot triggers",
+				func(server *Server, router chi.Router) {
+					router.With(server.preflightCheck).Post("/send/{formID}/{hash}", server.HandlerAPISendFormPost)
+				},
+				func(hash string) *http.Request {
+					buf := bytes.NewBuffer(nil)
+					writer := multipart.NewWriter(buf)
+					_ = writer.WriteField("message", "this is a test message")
+					_ = writer.WriteField("email", "example@example.com")
+					_ = writer.WriteField("company", "Honeypot Inc.")
+					_ = writer.Close()
+					req := httptest.NewRequest(http.MethodPost, "/send/testform_toml/"+hash, buf)
+					req.Header.Set("Content-Type", writer.FormDataContentType())
+					req.TLS = &tls.ConnectionState{}
+					req.Header.Set("Origin", origin)
+					return req
+				},
+				http.StatusNotFound,
+			},
+			{
+				"required fields missing",
+				func(server *Server, router chi.Router) {
+					router.With(server.preflightCheck).Post("/send/{formID}/{hash}", server.HandlerAPISendFormPost)
+				},
+				func(hash string) *http.Request {
+					buf := bytes.NewBuffer(nil)
+					writer := multipart.NewWriter(buf)
+					_ = writer.Close()
+					req := httptest.NewRequest(http.MethodPost, "/send/testform_toml/"+hash, buf)
+					req.Header.Set("Content-Type", writer.FormDataContentType())
+					req.TLS = &tls.ConnectionState{}
+					req.Header.Set("Origin", origin)
+					return req
+				},
+				http.StatusBadRequest,
+			},
 		}
-	})
-	t.Run("sending form without an invalid hash", func(t *testing.T) {
-		server, err := testServer(t, slog.LevelDebug, io.Discard)
-		if err != nil {
-			t.Fatalf("failed to create test server: %s", err)
-		}
-		server.config.Forms.Path = "../../testdata"
 
-		router := chi.NewRouter()
-		router.With(server.preflightCheck).Post("/send/{formID}/{hash}", server.HandlerAPISendFormPost)
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				server, err := testServer(t, slog.LevelDebug, io.Discard)
+				if err != nil {
+					t.Fatalf("failed to create test server: %s", err)
+				}
+				server.config.Forms.Path = "../../testdata"
+				server.cache.Set(computedHash, form, tokenCreatedAt, tokenExpiresAt)
 
-		buf := bytes.NewBuffer(nil)
-		writer := multipart.NewWriter(buf)
-		_ = writer.WriteField("email", "example@example.com")
-		_ = writer.WriteField("message", "this is a test message")
-		_ = writer.Close()
-		req := httptest.NewRequest(http.MethodPost, "/send/testform_toml/invalidhash", buf)
-		req.Header.Set("Content-Type", writer.FormDataContentType())
-		req.TLS = &tls.ConnectionState{}
-		req.Header.Set("Origin", "https://example.com")
-		recorder := httptest.NewRecorder()
-		router.ServeHTTP(recorder, req)
-		if recorder.Code != http.StatusBadRequest {
-			t.Errorf("expected status code %d, got: %d", http.StatusBadRequest, recorder.Code)
-		}
-	})
-	t.Run("sending form without an short hash", func(t *testing.T) {
-		server, err := testServer(t, slog.LevelDebug, io.Discard)
-		if err != nil {
-			t.Fatalf("failed to create test server: %s", err)
-		}
-		server.config.Forms.Path = "../../testdata"
-
-		router := chi.NewRouter()
-		router.With(server.preflightCheck).Post("/send/{formID}/{hash}", server.HandlerAPISendFormPost)
-
-		buf := bytes.NewBuffer(nil)
-		writer := multipart.NewWriter(buf)
-		_ = writer.WriteField("email", "example@example.com")
-		_ = writer.WriteField("message", "this is a test message")
-		_ = writer.Close()
-		req := httptest.NewRequest(http.MethodPost, "/send/testform_toml/9f86d081", buf)
-		req.Header.Set("Content-Type", writer.FormDataContentType())
-		req.TLS = &tls.ConnectionState{}
-		req.Header.Set("Origin", "https://example.com")
-		recorder := httptest.NewRecorder()
-		router.ServeHTTP(recorder, req)
-		if recorder.Code != http.StatusBadRequest {
-			t.Errorf("expected status code %d, got: %d", http.StatusBadRequest, recorder.Code)
+				router := chi.NewRouter()
+				tt.routerFn(server, router)
+				req := tt.reqFn(computedHash)
+				recorder := httptest.NewRecorder()
+				router.ServeHTTP(recorder, req)
+				if recorder.Code != tt.code {
+					t.Errorf("expected status code %d, got: %d", tt.code, recorder.Code)
+				}
+			})
 		}
 	})
 }
