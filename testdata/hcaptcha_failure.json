@@ -1,0 +1,9 @@
+{
+  "success": false,
+  "challenge_ts": "2025-12-21T10:20:15Z",
+  "hostname": "example.com",
+  "credit": false,
+  "error-codes": ["invalid-input-response", "timeout-or-duplicate"],
+  "score": 0.05,
+  "score_reason": ["automation_detected", "suspicious_behavior"]
+}

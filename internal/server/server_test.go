@@ -888,6 +888,59 @@ func TestServer_validateCaptcha(t *testing.T) {
 			},
 			false,
 		},
+		{
+			"hCaptcha successful response",
+			testResponseFromFile(t, "../../testdata/hcaptcha_success.json", http.StatusOK, false),
+			func(form *forms.Form) {
+				form.Validation.Hcaptcha.Enabled = true
+			},
+			map[string][]string{
+				hCaptchaSolutionField: {"hcaptcha_token"},
+			},
+			true,
+		},
+		{
+			"hCaptcha successful request but negative solution",
+			testResponseFromFile(t, "../../testdata/hcaptcha_success_but_negative.json", http.StatusOK, false),
+			func(form *forms.Form) {
+				form.Validation.Hcaptcha.Enabled = true
+			},
+			map[string][]string{
+				hCaptchaSolutionField: {"hcaptcha_token"},
+			},
+			false,
+		},
+		{
+			"hCaptcha failure response",
+			testResponseFromFile(t, "../../testdata/hcaptcha_failure.json", http.StatusUnauthorized, false),
+			func(form *forms.Form) {
+				form.Validation.Hcaptcha.Enabled = true
+			},
+			map[string][]string{
+				hCaptchaSolutionField: {"hcaptcha_token"},
+			},
+			false,
+		},
+		{
+			"hCaptcha fails http request",
+			testResponseFromFile(t, "../../testdata/hcaptcha_failure.json", http.StatusUnauthorized, true),
+			func(form *forms.Form) {
+				form.Validation.Hcaptcha.Enabled = true
+			},
+			map[string][]string{
+				hCaptchaSolutionField: {"hcaptcha_token"},
+			},
+			false,
+		},
+		{
+			"hCaptcha solution field is missing",
+			testResponseFromFile(t, "../../testdata/hcaptcha_failure.json", http.StatusUnauthorized, false),
+			func(form *forms.Form) {
+				form.Validation.Hcaptcha.Enabled = true
+			},
+			map[string][]string{},
+			false,
+		},
 	}
 
 	remoteAddr := "127.0.0.1"
