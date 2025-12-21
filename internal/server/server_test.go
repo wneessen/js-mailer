@@ -994,6 +994,59 @@ func TestServer_validateCaptcha(t *testing.T) {
 			map[string][]string{},
 			false,
 		},
+		{
+			"reCaptcha successful response",
+			testResponseFromFile(t, "../../testdata/recaptcha_success.json", http.StatusOK, false),
+			func(form *forms.Form) {
+				form.Validation.Recaptcha.Enabled = true
+			},
+			map[string][]string{
+				reCaptchaSolutionField: {"reCaptcha_token"},
+			},
+			true,
+		},
+		{
+			"reCaptcha successful request but negative solution",
+			testResponseFromFile(t, "../../testdata/recaptcha_success_but_negative.json", http.StatusOK, false),
+			func(form *forms.Form) {
+				form.Validation.Recaptcha.Enabled = true
+			},
+			map[string][]string{
+				reCaptchaSolutionField: {"reCaptcha_token"},
+			},
+			false,
+		},
+		{
+			"reCaptcha failure response",
+			testResponseFromFile(t, "../../testdata/recaptcha_failure.json", http.StatusUnauthorized, false),
+			func(form *forms.Form) {
+				form.Validation.Recaptcha.Enabled = true
+			},
+			map[string][]string{
+				reCaptchaSolutionField: {"reCaptcha_token"},
+			},
+			false,
+		},
+		{
+			"reCaptcha fails http request",
+			testResponseFromFile(t, "../../testdata/recaptcha_failure.json", http.StatusUnauthorized, true),
+			func(form *forms.Form) {
+				form.Validation.Recaptcha.Enabled = true
+			},
+			map[string][]string{
+				reCaptchaSolutionField: {"reCaptcha_token"},
+			},
+			false,
+		},
+		{
+			"reCaptcha solution field is missing",
+			testResponseFromFile(t, "../../testdata/recaptcha_failure.json", http.StatusUnauthorized, false),
+			func(form *forms.Form) {
+				form.Validation.Recaptcha.Enabled = true
+			},
+			map[string][]string{},
+			false,
+		},
 	}
 
 	remoteAddr := "127.0.0.1"
