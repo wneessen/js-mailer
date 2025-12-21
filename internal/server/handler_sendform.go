@@ -63,7 +63,7 @@ func (s *Server) HandlerAPISendFormPost(w http.ResponseWriter, r *http.Request) 
 
 	// Make sure the form exists and is valid
 	defer s.cache.Remove(hash)
-	form, tokenCreatedAt, tokenExpiresAt, err := s.formFromCache(formID, hash)
+	form, tokenCreatedAt, tokenExpiresAt, err := s.formFromCache(hash)
 	if err != nil {
 		s.log.Error("failed to validate requested form", logger.Err(err), slog.String("formID", formID),
 			slog.String("hash", hash))
@@ -144,7 +144,7 @@ func (s *Server) HandlerAPISendFormPost(w http.ResponseWriter, r *http.Request) 
 }
 
 // formFromCache returns the form configuration from the cache.
-func (s *Server) formFromCache(formID, hash string) (*forms.Form, time.Time, time.Time, error) {
+func (s *Server) formFromCache(hash string) (*forms.Form, time.Time, time.Time, error) {
 	form, createdAt, expiresAt, ok := s.cache.Get(hash)
 	if !ok || form == nil {
 		return nil, createdAt, expiresAt, errors.New("form config not found in cache")
@@ -194,14 +194,18 @@ func (s *Server) failsRequiredFields(validations []forms.ValidationField, submis
 			}
 			continue
 		case "number":
-			_, err := strconv.ParseInt(value, 10, 64)
-			if err != nil {
-				s.log.Warn("field is not of type number", logger.Err(err), slog.String("field", field.Name),
-					slog.String("value", value))
+			_, intErr := strconv.ParseInt(value, 10, 64)
+			_, floatErr := strconv.ParseFloat(value, 64)
+			if intErr != nil && floatErr != nil {
+				s.log.Warn("field is not of type number", logger.Err(intErr), logger.Err(floatErr),
+					slog.String("field", field.Name), slog.String("value", value))
 				invalidFields[field.Name] = "field is not of type number"
 			}
 			continue
 		case "bool":
+			if strings.EqualFold(value, "on") || strings.EqualFold(value, "off") {
+				continue
+			}
 			_, err := strconv.ParseBool(value)
 			if err != nil {
 				s.log.Warn("field is not of type bool", logger.Err(err), slog.String("field", field.Name),
