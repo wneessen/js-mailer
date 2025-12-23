@@ -27,6 +27,7 @@ type Form struct {
 		Content        string `fig:"content"`
 	}
 	Domains    []string `fig:"domains" validate:"required"`
+	AttachCSV  bool     `fig:"attach_csv"`
 	ID         string   `fig:"id" validate:"required"`
 	Recipients []string `fig:"recipients" validate:"required"`
 	ReplyTo    struct {

@@ -5,6 +5,7 @@
 package server
 
 import (
+	"bytes"
 	"fmt"
 	"net/http"
 	"strings"
@@ -101,6 +102,16 @@ func (s *Server) sendMessage(r *http.Request, form *forms.Form, client *mail.Cli
 		}
 		if err := message.ReplyTo(replyto); err != nil {
 			return "", fmt.Errorf("failed to set reply-to address: %w", err)
+		}
+	}
+
+	if form.AttachCSV {
+		buf := bytes.NewBuffer(nil)
+		if err := s.csvFromFields(buf, r); err != nil {
+			return "", fmt.Errorf("failed to read fields into CSV: %w", err)
+		}
+		if err := message.AttachReader("submission.csv", buf); err != nil {
+			return "", fmt.Errorf("failed to attach CSV file to message: %w", err)
 		}
 	}
 

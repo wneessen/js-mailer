@@ -9,6 +9,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"crypto/tls"
+	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -99,7 +100,7 @@ func TestServer_Start(t *testing.T) {
 
 func TestServer_HandlerAPIPingGet(t *testing.T) {
 	t.Run("ping returns pong", func(t *testing.T) {
-		server, err := testServer(t, slog.LevelDebug, os.Stderr)
+		server, err := testServer(t, slog.LevelDebug, io.Discard)
 		if err != nil {
 			t.Fatalf("failed to create test server: %s", err)
 		}
@@ -801,7 +802,7 @@ func TestServer_failsRequiredFields(t *testing.T) {
 	t.Run("checking required fields", func(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				server, err := testServer(t, slog.LevelDebug, os.Stderr)
+				server, err := testServer(t, slog.LevelDebug, io.Discard)
 				if err != nil {
 					t.Fatalf("failed to create test server: %s", err)
 				}
@@ -1053,7 +1054,7 @@ func TestServer_validateCaptcha(t *testing.T) {
 	t.Run("validate captcha against", func(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				server, err := testServer(t, slog.LevelDebug, os.Stderr)
+				server, err := testServer(t, slog.LevelDebug, io.Discard)
 				if err != nil {
 					t.Fatalf("failed to create test server: %s", err)
 				}
@@ -1068,6 +1069,79 @@ func TestServer_validateCaptcha(t *testing.T) {
 					t.Errorf("captcha validation failed: %s", err)
 				}
 			})
+		}
+	})
+}
+
+func TestServer_csvFromFields(t *testing.T) {
+	server, err := testServer(t, slog.LevelDebug, os.Stderr)
+	if err != nil {
+		t.Fatalf("failed to create test server: %s", err)
+	}
+	req := newMultipartRequest(t, map[string][]string{
+		"name":  {"Toni Tester"},
+		"email": {"toni.tester@example.com"},
+		"tags":  {"csv"},
+	})
+	if err = req.ParseMultipartForm(20 << 32); err != nil {
+		t.Fatalf("failed to parse multipart form: %s", err)
+	}
+
+	t.Run("CSV is generated from a form submission", func(t *testing.T) {
+		buf := bytes.NewBuffer(nil)
+		if err = server.csvFromFields(buf, req); err != nil {
+			t.Errorf("failed to generate CSV: %s", err)
+		}
+
+		reader := csv.NewReader(buf)
+		reader.Comma = ';'
+		header, err := reader.Read()
+		if err != nil {
+			t.Fatalf("failed to read CSV header: %s", err)
+		}
+
+		found := 0
+		wantHeader := []string{"name", "email", "tags"}
+		for i := range header {
+			for j := range wantHeader {
+				if header[i] == wantHeader[j] {
+					found++
+				}
+			}
+		}
+		if found != len(wantHeader) {
+			t.Errorf("expected header to contain %d fields, got: %d", len(wantHeader), found)
+		}
+
+		found = 0
+		row, err := reader.Read()
+		if err != nil {
+			t.Fatalf("failed to read CSV row: %s", err)
+		}
+		wantRow := []string{"Toni Tester", "toni.tester@example.com", "csv"}
+		for i := range row {
+			for j := range wantRow {
+				if row[i] == wantRow[j] {
+					found++
+				}
+			}
+		}
+		if found != len(wantRow) {
+			t.Errorf("expected row to contain %d fields, got: %d", len(wantRow), found)
+		}
+	})
+	t.Run("CSV generation fails with broken writer on first write", func(t *testing.T) {
+		writer := new(failWriter)
+		writer.maxBytes = 50
+		if err = server.csvFromFields(writer, req); err == nil {
+			t.Error("expected CSV generation to fail")
+		}
+	})
+	t.Run("CSV generation fails with broken writer on 2nd write", func(t *testing.T) {
+		writer := new(failWriter)
+		writer.maxBytes = 1
+		if err = server.csvFromFields(writer, req); err == nil {
+			t.Error("expected CSV generation to fail")
 		}
 	})
 }
@@ -1110,4 +1184,39 @@ func testResponseFromFile(t *testing.T, filename string, code int, fails bool) f
 			Header:     make(http.Header),
 		}, resErr
 	}
+}
+
+func newMultipartRequest(t *testing.T, fields map[string][]string) *http.Request {
+	t.Helper()
+
+	body := bytes.NewBuffer(nil)
+	writer := multipart.NewWriter(body)
+	for name, values := range fields {
+		for _, v := range values {
+			if err := writer.WriteField(name, v); err != nil {
+				t.Fatalf("failed to write field to multipart form: %q: %s", name, err)
+			}
+		}
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatalf("failed to close writer: %s", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/submit", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	return req
+}
+
+type failWriter struct {
+	maxBytes int
+	written  int
+}
+
+func (w *failWriter) Write(p []byte) (n int, err error) {
+	if w.written+len(p) > w.maxBytes {
+		return 0, io.ErrShortWrite
+	}
+	w.written += len(p)
+	return len(p), nil
 }
