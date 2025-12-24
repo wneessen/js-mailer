@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 )
 
@@ -22,6 +23,8 @@ func (s *Server) csvFromFields(dst io.Writer, r *http.Request) error {
 	for field := range values {
 		headers = append(headers, field)
 	}
+	slices.Sort(headers)
+
 	if err := writer.Write(headers); err != nil {
 		return fmt.Errorf("failed to write CSV header: %w", err)
 	}
