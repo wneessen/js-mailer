@@ -44,8 +44,9 @@ type Form struct {
 		DryRun   bool `fig:"dry_run"`
 	}
 	Validation struct {
-		Fields   []ValidationField `fig:"fields"`
-		Hcaptcha struct {
+		DisableSubmissionSpeedCheck bool              `fig:"disable_submission_speed_check"`
+		Fields                      []ValidationField `fig:"fields"`
+		Hcaptcha                    struct {
 			Enabled   bool   `fig:"enabled"`
 			SecretKey string `fig:"secret_key"`
 		}
