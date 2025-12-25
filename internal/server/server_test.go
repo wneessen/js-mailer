@@ -704,6 +704,44 @@ func TestServer_HandlerAPISendFormPost(t *testing.T) {
 			})
 		}
 	})
+	t.Run("too fast submission fails", func(t *testing.T) {
+		origin := "https://example.com"
+		tokenCreatedAt := time.Now()
+		tokenExpiresAt := tokenCreatedAt.Add(time.Hour)
+
+		form, err := forms.New("../../testdata", "testform_toml")
+		if err != nil {
+			t.Fatalf("failed to create form: %s", err)
+		}
+		form.Validation.DisableSubmissionSpeedCheck = false
+		hasher := sha256.New()
+		value := fmt.Sprintf("%s_%d_%d_%s_%s", origin, tokenCreatedAt.UnixNano(),
+			tokenExpiresAt.UnixNano(), form.ID, form.Secret)
+		hasher.Write([]byte(value))
+		computedHash := fmt.Sprintf("%x", hasher.Sum(nil))
+		server, err := testServer(t, slog.LevelDebug, io.Discard)
+		if err != nil {
+			t.Fatalf("failed to create test server: %s", err)
+		}
+		server.config.Forms.Path = "../../testdata"
+		server.cache.Set(computedHash, form, tokenCreatedAt, tokenExpiresAt)
+
+		router := chi.NewRouter()
+		router.With(server.preflightCheck).Post("/send/{formID}/{hash}", server.HandlerAPISendFormPost)
+		buf := bytes.NewBuffer(nil)
+		writer := multipart.NewWriter(buf)
+		_ = writer.Close()
+		req := httptest.NewRequest(http.MethodPost, "/send/testform_toml/"+computedHash, buf)
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+		req.TLS = &tls.ConnectionState{}
+		req.Header.Set("Origin", origin)
+		recorder := httptest.NewRecorder()
+		router.ServeHTTP(recorder, req)
+		if recorder.Code != http.StatusTooEarly {
+			t.Errorf("expected status code %d, got: %d", http.StatusTooEarly, recorder.Code)
+		}
+
+	})
 }
 
 func TestResponse_Render(t *testing.T) {
