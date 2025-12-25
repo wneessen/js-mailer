@@ -1246,6 +1246,37 @@ func TestServer_csvFromFields(t *testing.T) {
 	})
 }
 
+func TestServer_failsAntiSpamField(t *testing.T) {
+	server, err := testServer(t, slog.LevelDebug, io.Discard)
+	if err != nil {
+		t.Fatalf("failed to create test server: %s", err)
+	}
+	t.Run("does not fail with all data present", func(t *testing.T) {
+		name := "_key"
+		value := "value"
+		submission := map[string][]string{name: {value}}
+		if server.failsAntiSpamField(name, value, submission) {
+			t.Error("expected anti-spam field to not fail")
+		}
+	})
+	t.Run("fails on no submission fieldset", func(t *testing.T) {
+		name := "_key"
+		value := "value"
+		submission := map[string][]string{}
+		if !server.failsAntiSpamField(name, value, submission) {
+			t.Error("expected anti-spam field to fail")
+		}
+	})
+	t.Run("fails on wrong value in submission fieldset", func(t *testing.T) {
+		name := "_key"
+		value := "value"
+		submission := map[string][]string{name: {"wrong"}}
+		if !server.failsAntiSpamField(name, value, submission) {
+			t.Error("expected anti-spam field to fail")
+		}
+	})
+}
+
 func testServer(t *testing.T, level slog.Level, output io.Writer) (*Server, error) {
 	t.Helper()
 
