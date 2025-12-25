@@ -43,7 +43,10 @@ func TestCache_Set(t *testing.T) {
 			t.Fatal("cache is nil")
 		}
 
-		cache.Set(key, testForm, time.Now(), time.Now().Add(interval))
+		cache.Set(key, testForm, ItemParams{
+			TokenCreatedAt: time.Now(),
+			TokenExpiresAt: time.Now().Add(interval),
+		})
 		if _, ok := cache.items[key]; !ok {
 			t.Error("item was not added to the cache")
 		}
@@ -62,19 +65,22 @@ func TestCache_Get(t *testing.T) {
 			t.Fatal("cache is nil")
 		}
 
-		cache.Set(key, testForm, now, expireAt)
-		form, createdAt, expiresAt, exists := cache.Get(key)
+		cache.Set(key, testForm, ItemParams{
+			TokenCreatedAt: now,
+			TokenExpiresAt: expireAt,
+		})
+		form, params, exists := cache.Get(key)
 		if !exists {
 			t.Error("item was not found in the cache")
 		}
 		if form.ID != testForm.ID {
 			t.Errorf("expected form to be %s, got %s", testForm.ID, form.ID)
 		}
-		if createdAt != now {
-			t.Errorf("expected created at to be %s, got %s", now, createdAt)
+		if params.TokenCreatedAt != now {
+			t.Errorf("expected created at to be %s, got %s", now, params.TokenCreatedAt)
 		}
-		if expiresAt != expireAt {
-			t.Errorf("expected expires at to be %s, got %s", expireAt, expiresAt)
+		if params.TokenExpiresAt != expireAt {
+			t.Errorf("expected expires at to be %s, got %s", expireAt, params.TokenExpiresAt)
 		}
 	})
 	t.Run("get does not find cache item", func(t *testing.T) {
@@ -84,8 +90,8 @@ func TestCache_Get(t *testing.T) {
 			t.Fatal("cache is nil")
 		}
 
-		cache.Set(key, testForm, now, expireAt)
-		_, _, _, exists := cache.Get(key + "non-existing")
+		cache.Set(key, testForm, ItemParams{TokenCreatedAt: now, TokenExpiresAt: expireAt})
+		_, _, exists := cache.Get(key + "non-existing")
 		if exists {
 			t.Error("item was expected to not exist in the cache")
 		}
@@ -97,10 +103,13 @@ func TestCache_Get(t *testing.T) {
 			// Make sure the auto cleanup goroutine is stopped
 			cache.Stop()
 
-			cache.Set("key", testForm, time.Now(), time.Now().Add(interval))
+			cache.Set("key", testForm, ItemParams{
+				TokenCreatedAt: time.Now(),
+				TokenExpiresAt: time.Now().Add(interval),
+			})
 			time.Sleep(interval + 1)
 			synctest.Wait()
-			_, _, _, exists := cache.Get("key")
+			_, _, exists := cache.Get("key")
 			if exists {
 				t.Error("item was expected to be expired")
 			}
@@ -119,9 +128,9 @@ func TestCache_Remove(t *testing.T) {
 			t.Fatal("cache is nil")
 		}
 
-		cache.Set(key, testForm, now, expireAt)
+		cache.Set(key, testForm, ItemParams{TokenCreatedAt: now, TokenExpiresAt: expireAt})
 		cache.Remove(key)
-		_, _, _, exists := cache.Get(key)
+		_, _, exists := cache.Get(key)
 		if exists {
 			t.Error("item was expected to be removed from the cache")
 		}
@@ -135,10 +144,13 @@ func TestCache_cleanupLoop(t *testing.T) {
 		cache.Start()
 		t.Cleanup(cache.Stop)
 
-		cache.Set("key", testForm, time.Now(), time.Now().Add(interval))
+		cache.Set("key", testForm, ItemParams{
+			TokenCreatedAt: time.Now(),
+			TokenExpiresAt: time.Now().Add(interval),
+		})
 		time.Sleep(interval * 2)
 		synctest.Wait()
-		_, _, _, exists := cache.Get("key")
+		_, _, exists := cache.Get("key")
 		if exists {
 			t.Error("item was expected to be expired")
 		}

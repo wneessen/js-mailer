@@ -27,6 +27,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/wneessen/js-mailer/internal/cache"
 	"github.com/wneessen/js-mailer/internal/config"
 	"github.com/wneessen/js-mailer/internal/forms"
 	"github.com/wneessen/js-mailer/internal/logger"
@@ -616,7 +617,10 @@ func TestServer_HandlerAPISendFormPost(t *testing.T) {
 				"hash does not match",
 				func(server *Server, router chi.Router) {
 					router.With(server.preflightCheck).Post("/send/{formID}/{hash}", server.HandlerAPISendFormPost)
-					server.cache.Set("9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08", &forms.Form{}, time.Now(), time.Now().Add(time.Minute))
+					server.cache.Set("9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08", &forms.Form{}, cache.ItemParams{
+						TokenCreatedAt: time.Now(),
+						TokenExpiresAt: time.Now().Add(time.Minute),
+					})
 				},
 				func(string) *http.Request {
 					buf := bytes.NewBuffer(nil)
@@ -691,7 +695,10 @@ func TestServer_HandlerAPISendFormPost(t *testing.T) {
 					t.Fatalf("failed to create test server: %s", err)
 				}
 				server.config.Forms.Path = "../../testdata"
-				server.cache.Set(computedHash, form, tokenCreatedAt, tokenExpiresAt)
+				server.cache.Set(computedHash, form, cache.ItemParams{
+					TokenCreatedAt: tokenCreatedAt,
+					TokenExpiresAt: tokenExpiresAt,
+				})
 
 				router := chi.NewRouter()
 				tt.routerFn(server, router)
@@ -724,7 +731,10 @@ func TestServer_HandlerAPISendFormPost(t *testing.T) {
 			t.Fatalf("failed to create test server: %s", err)
 		}
 		server.config.Forms.Path = "../../testdata"
-		server.cache.Set(computedHash, form, tokenCreatedAt, tokenExpiresAt)
+		server.cache.Set(computedHash, form, cache.ItemParams{
+			TokenCreatedAt: tokenCreatedAt,
+			TokenExpiresAt: tokenExpiresAt,
+		})
 
 		router := chi.NewRouter()
 		router.With(server.preflightCheck).Post("/send/{formID}/{hash}", server.HandlerAPISendFormPost)
