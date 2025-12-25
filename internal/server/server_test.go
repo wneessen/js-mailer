@@ -740,7 +740,6 @@ func TestServer_HandlerAPISendFormPost(t *testing.T) {
 		if recorder.Code != http.StatusTooEarly {
 			t.Errorf("expected status code %d, got: %d", http.StatusTooEarly, recorder.Code)
 		}
-
 	})
 }
 
