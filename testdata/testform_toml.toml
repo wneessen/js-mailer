@@ -28,6 +28,7 @@ dry_run = true
 
 [validation]
 honeypot = "company"
+disable_submission_speed_check = true
 
 [[validation.fields]]
 name = "email"
