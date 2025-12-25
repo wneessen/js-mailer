@@ -32,7 +32,10 @@ type SendResponse struct {
 	MessageResponse      string `json:"message_response"`
 }
 
-const formMaxMemory = 32 << 20
+const (
+	formMaxMemory       = 32 << 20
+	formSubmissionSpeed = time.Second * 3
+)
 
 var (
 	ErrMissingFormIDOrHash            = errors.New("missing form ID or token hash")
@@ -40,6 +43,7 @@ var (
 	ErrFailedToParseForm              = fmt.Errorf("failed to parse form submission")
 	ErrRequiredFieldsValidationFailed = errors.New("required fields validation failed")
 	ErrCaptchaValidationFailed        = errors.New("captcha validation failed")
+	ErrFormSubmittedTooFast           = errors.New("form submission was not expected yet")
 )
 
 func (s *Server) HandlerAPISendFormPost(w http.ResponseWriter, r *http.Request) {
@@ -88,6 +92,18 @@ func (s *Server) HandlerAPISendFormPost(w http.ResponseWriter, r *http.Request) 
 		s.log.Error("failed to parse form submission", logger.Err(err))
 		_ = render.Render(w, r, ErrUnexpected(ErrFailedToParseForm))
 		return
+	}
+
+	// Check the submission speed
+	if !form.Validation.DisableSubmissionSpeedCheck {
+		if time.Since(tokenCreatedAt) < formSubmissionSpeed {
+			s.log.Error("form was submitted too fast", slog.String("formID", formID),
+				slog.String("hash", hash),
+				slog.String("submission_speed", time.Since(tokenCreatedAt).String()),
+			)
+			_ = render.Render(w, r, NewErrResponse(http.StatusTooEarly, ErrFormSubmittedTooFast))
+			return
+		}
 	}
 
 	// Check for honeypot fields
