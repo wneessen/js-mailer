@@ -573,6 +573,8 @@ func TestServer_HandlerAPISendFormPost(t *testing.T) {
 		origin := "https://example.com"
 		tokenCreatedAt := time.Now()
 		tokenExpiresAt := tokenCreatedAt.Add(time.Hour)
+		randName := "_name"
+		randValue := "testValue"
 
 		form, err := forms.New("../../testdata", "testform_toml")
 		if err != nil {
@@ -739,6 +741,25 @@ func TestServer_HandlerAPISendFormPost(t *testing.T) {
 				},
 				http.StatusBadRequest,
 			},
+			{
+				"random anti-spam field missing",
+				func(server *Server, router chi.Router) {
+					router.With(server.preflightCheck).Post("/send/{formID}/{hash}", server.HandlerAPISendFormPost)
+				},
+				func(hash string) *http.Request {
+					buf := bytes.NewBuffer(nil)
+					writer := multipart.NewWriter(buf)
+					_ = writer.WriteField("email", "example@example.com")
+					_ = writer.WriteField("message", "this is a test message")
+					_ = writer.Close()
+					req := httptest.NewRequest(http.MethodPost, "/send/testform_toml_random/"+hash, buf)
+					req.Header.Set("Content-Type", writer.FormDataContentType())
+					req.TLS = &tls.ConnectionState{}
+					req.Header.Set("Origin", origin)
+					return req
+				},
+				http.StatusBadRequest,
+			},
 		}
 
 		for _, tt := range tests {
@@ -749,8 +770,10 @@ func TestServer_HandlerAPISendFormPost(t *testing.T) {
 				}
 				server.config.Forms.Path = "../../testdata"
 				server.cache.Set(computedHash, form, cache.ItemParams{
-					TokenCreatedAt: tokenCreatedAt,
-					TokenExpiresAt: tokenExpiresAt,
+					TokenCreatedAt:   tokenCreatedAt,
+					TokenExpiresAt:   tokenExpiresAt,
+					RandomFieldName:  randName,
+					RandomFieldValue: randValue,
 				})
 
 				router := chi.NewRouter()
