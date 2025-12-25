@@ -1,0 +1,61 @@
+domains = ["example.com", "www.example.com"]
+id = "contact-form"
+recipients = ["support@example.com", "sales@example.com"]
+secret = "test-secret-key"
+sender = "no-reply@example.com"
+
+[content]
+subject = "Contact form submission"
+fields = ["name", "email", "message"]
+
+[confirmation]
+enabled = true
+rcpt_field = "email"
+subject = "We received your message"
+content = "Thank you for contacting us. We will get back to you shortly."
+
+[replyTo]
+field = "email"
+
+[server]
+host = "smtp.example.com"
+port = 587
+username = "smtp-user"
+password = "smtp-password"
+timeout = "10s"
+force_tls = true
+dry_run = true
+
+[validation]
+honeypot = "company"
+disable_submission_speed_check = true
+random_anti_spam_field = true
+
+[[validation.fields]]
+name = "email"
+required = true
+type = "email"
+value = ""
+
+[[validation.fields]]
+name = "message"
+required = true
+type = "string"
+value = ""
+
+[validation.hcaptcha]
+enabled = false
+secret_key = ""
+
+[validation.recaptcha]
+enabled = false
+secret_key = "recaptcha-test-key"
+
+[validation.turnstile]
+enabled = false
+secret_key = ""
+
+[validation.private_captcha]
+host = "http://localhost:8081"
+enabled = false
+api_key = "private-captcha-key"

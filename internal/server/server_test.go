@@ -344,6 +344,59 @@ func TestServer_HandlerAPITokenGet(t *testing.T) {
 			t.Errorf("expected error %s, got: %s", wantErr, data.Errors[0])
 		}
 	})
+	t.Run("token response contains a random anti-spam field", func(t *testing.T) {
+		server, err := testServer(t, slog.LevelDebug, io.Discard)
+		if err != nil {
+			t.Fatalf("failed to create test server: %s", err)
+		}
+		server.config.Forms.Path = "../../testdata"
+
+		router := chi.NewRouter()
+		router.With(server.preflightCheck).Get("/token/{formID}", server.HandlerAPITokenGet)
+
+		req := httptest.NewRequest(http.MethodGet, "/token/testform_toml_random", nil)
+		req.TLS = &tls.ConnectionState{}
+		req.Header.Set("Origin", "https://example.com")
+		recorder := httptest.NewRecorder()
+		router.ServeHTTP(recorder, req)
+
+		if recorder.Code != http.StatusCreated {
+			t.Errorf("expected status code %d, got: %d", http.StatusCreated, recorder.Code)
+		}
+
+		type response struct {
+			Success    bool          `json:"success"`
+			StatusCode int           `json:"statusCode"`
+			Status     string        `json:"status"`
+			Message    string        `json:"message,omitempty"`
+			Timestamp  time.Time     `json:"timestamp"`
+			RequestID  string        `json:"requestId,omitempty"`
+			Data       TokenResponse `json:"data,omitempty"`
+			Errors     []string      `json:"errors,omitempty"`
+		}
+		body := new(response)
+		if err = json.NewDecoder(recorder.Body).Decode(&body); err != nil {
+			t.Fatalf("failed to decode JSON response: %s", err)
+		}
+		_, params, ok := server.cache.Get(body.Data.Token)
+		if !ok {
+			t.Error("expected to find form in cache")
+		}
+		if params.RandomFieldName == "" {
+			t.Error("expected random field name to be set")
+		}
+		if params.RandomFieldValue == "" {
+			t.Error("expected random field value to be set")
+		}
+		want := `<input type="hidden" name="_` + params.RandomFieldName + `" value="` +
+			params.RandomFieldValue + `">`
+		if body.Data.RandomField == "" {
+			t.Error("expected random field to be set in token response")
+		}
+		if body.Data.RandomField != want {
+			t.Errorf("expected random field %s, got: %s", want, body.Data.RandomField)
+		}
+	})
 }
 
 func TestServer_preflightCheck(t *testing.T) {
