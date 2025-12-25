@@ -12,10 +12,16 @@ import (
 )
 
 type item struct {
-	form           *forms.Form
-	tokenCreatedAt time.Time
-	tokenExpiresAt time.Time
-	expiration     time.Time
+	form       *forms.Form
+	params     ItemParams
+	expiration time.Time
+}
+
+type ItemParams struct {
+	TokenCreatedAt   time.Time
+	TokenExpiresAt   time.Time
+	RandomFieldName  string
+	RandomFieldValue string
 }
 
 type Cache struct {
@@ -40,35 +46,34 @@ func (c *Cache) Start() {
 }
 
 // Set stores a value without TTL.
-func (c *Cache) Set(key string, form *forms.Form, createdAt, expiresAt time.Time) {
+func (c *Cache) Set(key string, form *forms.Form, params ItemParams) {
 	c.mu.Lock()
 	c.items[key] = &item{
-		form:           form,
-		tokenCreatedAt: createdAt,
-		tokenExpiresAt: expiresAt,
-		expiration:     time.Now().Add(c.ttl),
+		form:       form,
+		params:     params,
+		expiration: time.Now().Add(c.ttl),
 	}
 	c.mu.Unlock()
 }
 
 // Get retrieves a value. Second return value indicates presence.
-func (c *Cache) Get(key string) (*forms.Form, time.Time, time.Time, bool) {
+func (c *Cache) Get(key string) (*forms.Form, ItemParams, bool) {
 	c.mu.RLock()
 	cacheItem, ok := c.items[key]
 	c.mu.RUnlock()
 
 	if !ok {
-		return nil, time.Time{}, time.Time{}, false
+		return nil, ItemParams{}, false
 	}
 
 	if !cacheItem.expiration.IsZero() && time.Now().After(cacheItem.expiration) {
 		c.mu.Lock()
 		delete(c.items, key)
 		c.mu.Unlock()
-		return nil, time.Time{}, time.Time{}, false
+		return nil, ItemParams{}, false
 	}
 
-	return cacheItem.form, cacheItem.tokenCreatedAt, cacheItem.tokenExpiresAt, true
+	return cacheItem.form, cacheItem.params, true
 }
 
 func (c *Cache) Remove(key string) {

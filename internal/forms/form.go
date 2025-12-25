@@ -45,6 +45,7 @@ type Form struct {
 	}
 	Validation struct {
 		DisableSubmissionSpeedCheck bool              `fig:"disable_submission_speed_check"`
+		RandomAntiSpamField         bool              `fig:"random_anti_spam_field"`
 		Fields                      []ValidationField `fig:"fields"`
 		Hcaptcha                    struct {
 			Enabled   bool   `fig:"enabled"`
