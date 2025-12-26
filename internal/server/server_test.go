@@ -741,25 +741,6 @@ func TestServer_HandlerAPISendFormPost(t *testing.T) {
 				},
 				http.StatusBadRequest,
 			},
-			{
-				"random anti-spam field missing",
-				func(server *Server, router chi.Router) {
-					router.With(server.preflightCheck).Post("/send/{formID}/{hash}", server.HandlerAPISendFormPost)
-				},
-				func(hash string) *http.Request {
-					buf := bytes.NewBuffer(nil)
-					writer := multipart.NewWriter(buf)
-					_ = writer.WriteField("email", "example@example.com")
-					_ = writer.WriteField("message", "this is a test message")
-					_ = writer.Close()
-					req := httptest.NewRequest(http.MethodPost, "/send/testform_toml_random/"+hash, buf)
-					req.Header.Set("Content-Type", writer.FormDataContentType())
-					req.TLS = &tls.ConnectionState{}
-					req.Header.Set("Origin", origin)
-					return req
-				},
-				http.StatusBadRequest,
-			},
 		}
 
 		for _, tt := range tests {
@@ -825,6 +806,52 @@ func TestServer_HandlerAPISendFormPost(t *testing.T) {
 		router.ServeHTTP(recorder, req)
 		if recorder.Code != http.StatusTooEarly {
 			t.Errorf("expected status code %d, got: %d", http.StatusTooEarly, recorder.Code)
+		}
+	})
+	t.Run("fails on random anti-spam field submission", func(t *testing.T) {
+		origin := "https://example.com"
+		tokenCreatedAt := time.Now()
+		tokenExpiresAt := tokenCreatedAt.Add(time.Hour)
+		randName := "_name"
+		randValue := "testValue"
+
+		form, err := forms.New("../../testdata", "testform_toml_random")
+		if err != nil {
+			t.Fatalf("failed to create form: %s", err)
+		}
+		hasher := sha256.New()
+		value := fmt.Sprintf("%s_%d_%d_%s_%s", origin, tokenCreatedAt.UnixNano(),
+			tokenExpiresAt.UnixNano(), form.ID, form.Secret)
+		hasher.Write([]byte(value))
+		computedHash := fmt.Sprintf("%x", hasher.Sum(nil))
+		server, err := testServer(t, slog.LevelDebug, os.Stderr)
+		if err != nil {
+			t.Fatalf("failed to create test server: %s", err)
+		}
+		server.config.Forms.Path = "../../testdata"
+		server.cache.Set(computedHash, form, cache.ItemParams{
+			TokenCreatedAt:   tokenCreatedAt,
+			TokenExpiresAt:   tokenExpiresAt,
+			RandomFieldName:  randName,
+			RandomFieldValue: randValue,
+		})
+
+		router := chi.NewRouter()
+		router.With(server.preflightCheck).Post("/send/{formID}/{hash}", server.HandlerAPISendFormPost)
+		buf := bytes.NewBuffer(nil)
+		writer := multipart.NewWriter(buf)
+		_ = writer.WriteField("message", "this is a test message")
+		_ = writer.WriteField("email", "example@example.com")
+		_ = writer.Close()
+		req := httptest.NewRequest(http.MethodPost, "/send/testform_toml_random/"+computedHash, buf)
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+		req.TLS = &tls.ConnectionState{}
+		req.Header.Set("Origin", origin)
+		req.Header.Set("X-Form-Random-Field", "true")
+		recorder := httptest.NewRecorder()
+		router.ServeHTTP(recorder, req)
+		if recorder.Code != http.StatusNotFound {
+			t.Errorf("expected status code %d, got: %d", http.StatusNotFound, recorder.Code)
 		}
 	})
 }
