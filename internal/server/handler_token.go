@@ -5,16 +5,19 @@
 package server
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 
+	"github.com/wneessen/js-mailer/internal/cache"
 	"github.com/wneessen/js-mailer/internal/forms"
 	"github.com/wneessen/js-mailer/internal/logger"
 )
@@ -30,13 +33,14 @@ var (
 
 // TokenResponse is the JSON response struct for the token endpoint
 type TokenResponse struct {
-	Token      string `json:"token"`
-	FormID     string `json:"form_id"`
-	CreateTime int64  `json:"create_time,omitempty"`
-	ExpireTime int64  `json:"expire_time,omitempty"`
-	URL        string `json:"url"`
-	Encoding   string `json:"encoding"`
-	ReqMethod  string `json:"request_method"`
+	Token       string `json:"token"`
+	FormID      string `json:"form_id"`
+	CreateTime  int64  `json:"create_time,omitempty"`
+	ExpireTime  int64  `json:"expire_time,omitempty"`
+	URL         string `json:"url"`
+	Encoding    string `json:"encoding"`
+	ReqMethod   string `json:"request_method"`
+	RandomField string `json:"random_field,omitempty"`
 }
 
 func (s *Server) HandlerAPITokenGet(w http.ResponseWriter, r *http.Request) {
@@ -51,6 +55,12 @@ func (s *Server) HandlerAPITokenGet(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		_ = render.Render(w, r, ErrBadRequest(err))
 		return
+	}
+
+	// Random anti-spam field
+	var randName, randValue, randHTML string
+	if form.Validation.RandomAntiSpamField {
+		randName, randValue, randHTML = s.antiSpamField()
 	}
 
 	// Validate that the request is coming from the correct origin
@@ -75,13 +85,25 @@ func (s *Server) HandlerAPITokenGet(w http.ResponseWriter, r *http.Request) {
 		ExpireTime: expire.Unix(),
 		URL: fmt.Sprintf("%s://%s/send/%s/%s", schema, r.Host, url.QueryEscape(formID),
 			url.QueryEscape(hash)),
-		Encoding:  encodingMPFormData,
-		ReqMethod: http.MethodPost,
+		Encoding:    encodingMPFormData,
+		ReqMethod:   http.MethodPost,
+		RandomField: randHTML,
 	}
-	s.cache.Set(hash, form, now, expire)
+	s.cache.Set(hash, form, cache.ItemParams{
+		TokenCreatedAt:   now,
+		TokenExpiresAt:   expire,
+		RandomFieldName:  randName,
+		RandomFieldValue: randValue,
+	})
 
 	resp := NewResponse(http.StatusCreated, "sender token successfully created", token)
 	if renderErr := render.Render(w, r, resp); renderErr != nil {
 		s.log.Error("failed to render TokenResposne", logger.Err(renderErr))
 	}
+}
+
+func (s *Server) antiSpamField() (string, string, string) {
+	name := strings.ToLower(rand.Text())
+	value := strings.ToLower(rand.Text())
+	return name, value, `<input type="hidden" name="_` + name + `" value="` + value + `">`
 }

@@ -20,6 +20,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 
+	"github.com/wneessen/js-mailer/internal/cache"
 	"github.com/wneessen/js-mailer/internal/forms"
 	"github.com/wneessen/js-mailer/internal/logger"
 )
@@ -67,13 +68,15 @@ func (s *Server) HandlerAPISendFormPost(w http.ResponseWriter, r *http.Request) 
 
 	// Make sure the form exists and is valid
 	defer s.cache.Remove(hash)
-	form, tokenCreatedAt, tokenExpiresAt, err := s.formFromCache(hash)
+	form, params, err := s.formFromCache(hash)
 	if err != nil {
 		s.log.Error("failed to validate requested form", logger.Err(err), slog.String("formID", formID),
 			slog.String("hash", hash))
 		_ = render.Render(w, r, ErrNotFound(ErrInvalidFormIDOrToken))
 		return
 	}
+	tokenCreatedAt := params.TokenCreatedAt
+	tokenExpiresAt := params.TokenExpiresAt
 
 	// Validate the token
 	hasher := sha256.New()
@@ -111,6 +114,16 @@ func (s *Server) HandlerAPISendFormPost(w http.ResponseWriter, r *http.Request) 
 		fails := s.failsHoneypot(form.Validation.Honeypot, r.MultipartForm.Value)
 		if fails {
 			s.log.Warn("submitted values did not pass honeypot validation")
+			_ = render.Render(w, r, ErrNotFound(ErrInvalidFormIDOrToken))
+			return
+		}
+	}
+
+	// Check for anti spam field
+	if form.Validation.RandomAntiSpamField {
+		fails := s.failsAntiSpamField(params.RandomFieldName, params.RandomFieldValue, r.MultipartForm.Value)
+		if fails {
+			s.log.Warn("submitted values did not pass random anti spam field validation")
 			_ = render.Render(w, r, ErrNotFound(ErrInvalidFormIDOrToken))
 			return
 		}
@@ -160,13 +173,13 @@ func (s *Server) HandlerAPISendFormPost(w http.ResponseWriter, r *http.Request) 
 }
 
 // formFromCache returns the form configuration from the cache.
-func (s *Server) formFromCache(hash string) (*forms.Form, time.Time, time.Time, error) {
-	form, createdAt, expiresAt, ok := s.cache.Get(hash)
+func (s *Server) formFromCache(hash string) (*forms.Form, cache.ItemParams, error) {
+	form, params, ok := s.cache.Get(hash)
 	if !ok || form == nil {
-		return nil, createdAt, expiresAt, errors.New("form config not found in cache")
+		return nil, params, errors.New("form config not found in cache")
 	}
 
-	return form, createdAt, expiresAt, nil
+	return form, params, nil
 }
 
 // failsHoneypot checks if the submitted values fail the honeypot validation.
@@ -241,4 +254,16 @@ func (s *Server) failsRequiredFields(validations []forms.ValidationField, submis
 	}
 
 	return len(invalidFields) > 0, invalidFields
+}
+
+// failsAntiSpamField checks if the submitted values fail the random anti spam field validation.
+func (s *Server) failsAntiSpamField(fieldName, fieldValue string, submission map[string][]string) bool {
+	values, ok := submission[fieldName]
+	if !ok || len(values) == 0 {
+		return true
+	}
+	if values[0] != fieldValue {
+		return true
+	}
+	return false
 }

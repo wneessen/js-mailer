@@ -27,6 +27,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/wneessen/js-mailer/internal/cache"
 	"github.com/wneessen/js-mailer/internal/config"
 	"github.com/wneessen/js-mailer/internal/forms"
 	"github.com/wneessen/js-mailer/internal/logger"
@@ -343,6 +344,59 @@ func TestServer_HandlerAPITokenGet(t *testing.T) {
 			t.Errorf("expected error %s, got: %s", wantErr, data.Errors[0])
 		}
 	})
+	t.Run("token response contains a random anti-spam field", func(t *testing.T) {
+		server, err := testServer(t, slog.LevelDebug, io.Discard)
+		if err != nil {
+			t.Fatalf("failed to create test server: %s", err)
+		}
+		server.config.Forms.Path = "../../testdata"
+
+		router := chi.NewRouter()
+		router.With(server.preflightCheck).Get("/token/{formID}", server.HandlerAPITokenGet)
+
+		req := httptest.NewRequest(http.MethodGet, "/token/testform_toml_random", nil)
+		req.TLS = &tls.ConnectionState{}
+		req.Header.Set("Origin", "https://example.com")
+		recorder := httptest.NewRecorder()
+		router.ServeHTTP(recorder, req)
+
+		if recorder.Code != http.StatusCreated {
+			t.Errorf("expected status code %d, got: %d", http.StatusCreated, recorder.Code)
+		}
+
+		type response struct {
+			Success    bool          `json:"success"`
+			StatusCode int           `json:"statusCode"`
+			Status     string        `json:"status"`
+			Message    string        `json:"message,omitempty"`
+			Timestamp  time.Time     `json:"timestamp"`
+			RequestID  string        `json:"requestId,omitempty"`
+			Data       TokenResponse `json:"data,omitempty"`
+			Errors     []string      `json:"errors,omitempty"`
+		}
+		body := new(response)
+		if err = json.NewDecoder(recorder.Body).Decode(&body); err != nil {
+			t.Fatalf("failed to decode JSON response: %s", err)
+		}
+		_, params, ok := server.cache.Get(body.Data.Token)
+		if !ok {
+			t.Error("expected to find form in cache")
+		}
+		if params.RandomFieldName == "" {
+			t.Error("expected random field name to be set")
+		}
+		if params.RandomFieldValue == "" {
+			t.Error("expected random field value to be set")
+		}
+		want := `<input type="hidden" name="_` + params.RandomFieldName + `" value="` +
+			params.RandomFieldValue + `">`
+		if body.Data.RandomField == "" {
+			t.Error("expected random field to be set in token response")
+		}
+		if body.Data.RandomField != want {
+			t.Errorf("expected random field %s, got: %s", want, body.Data.RandomField)
+		}
+	})
 }
 
 func TestServer_preflightCheck(t *testing.T) {
@@ -519,6 +573,8 @@ func TestServer_HandlerAPISendFormPost(t *testing.T) {
 		origin := "https://example.com"
 		tokenCreatedAt := time.Now()
 		tokenExpiresAt := tokenCreatedAt.Add(time.Hour)
+		randName := "_name"
+		randValue := "testValue"
 
 		form, err := forms.New("../../testdata", "testform_toml")
 		if err != nil {
@@ -616,7 +672,10 @@ func TestServer_HandlerAPISendFormPost(t *testing.T) {
 				"hash does not match",
 				func(server *Server, router chi.Router) {
 					router.With(server.preflightCheck).Post("/send/{formID}/{hash}", server.HandlerAPISendFormPost)
-					server.cache.Set("9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08", &forms.Form{}, time.Now(), time.Now().Add(time.Minute))
+					server.cache.Set("9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08", &forms.Form{}, cache.ItemParams{
+						TokenCreatedAt: time.Now(),
+						TokenExpiresAt: time.Now().Add(time.Minute),
+					})
 				},
 				func(string) *http.Request {
 					buf := bytes.NewBuffer(nil)
@@ -691,7 +750,12 @@ func TestServer_HandlerAPISendFormPost(t *testing.T) {
 					t.Fatalf("failed to create test server: %s", err)
 				}
 				server.config.Forms.Path = "../../testdata"
-				server.cache.Set(computedHash, form, tokenCreatedAt, tokenExpiresAt)
+				server.cache.Set(computedHash, form, cache.ItemParams{
+					TokenCreatedAt:   tokenCreatedAt,
+					TokenExpiresAt:   tokenExpiresAt,
+					RandomFieldName:  randName,
+					RandomFieldValue: randValue,
+				})
 
 				router := chi.NewRouter()
 				tt.routerFn(server, router)
@@ -724,7 +788,10 @@ func TestServer_HandlerAPISendFormPost(t *testing.T) {
 			t.Fatalf("failed to create test server: %s", err)
 		}
 		server.config.Forms.Path = "../../testdata"
-		server.cache.Set(computedHash, form, tokenCreatedAt, tokenExpiresAt)
+		server.cache.Set(computedHash, form, cache.ItemParams{
+			TokenCreatedAt: tokenCreatedAt,
+			TokenExpiresAt: tokenExpiresAt,
+		})
 
 		router := chi.NewRouter()
 		router.With(server.preflightCheck).Post("/send/{formID}/{hash}", server.HandlerAPISendFormPost)
@@ -739,6 +806,52 @@ func TestServer_HandlerAPISendFormPost(t *testing.T) {
 		router.ServeHTTP(recorder, req)
 		if recorder.Code != http.StatusTooEarly {
 			t.Errorf("expected status code %d, got: %d", http.StatusTooEarly, recorder.Code)
+		}
+	})
+	t.Run("fails on random anti-spam field submission", func(t *testing.T) {
+		origin := "https://example.com"
+		tokenCreatedAt := time.Now()
+		tokenExpiresAt := tokenCreatedAt.Add(time.Hour)
+		randName := "_name"
+		randValue := "testValue"
+
+		form, err := forms.New("../../testdata", "testform_toml_random")
+		if err != nil {
+			t.Fatalf("failed to create form: %s", err)
+		}
+		hasher := sha256.New()
+		value := fmt.Sprintf("%s_%d_%d_%s_%s", origin, tokenCreatedAt.UnixNano(),
+			tokenExpiresAt.UnixNano(), form.ID, form.Secret)
+		hasher.Write([]byte(value))
+		computedHash := fmt.Sprintf("%x", hasher.Sum(nil))
+		server, err := testServer(t, slog.LevelDebug, os.Stderr)
+		if err != nil {
+			t.Fatalf("failed to create test server: %s", err)
+		}
+		server.config.Forms.Path = "../../testdata"
+		server.cache.Set(computedHash, form, cache.ItemParams{
+			TokenCreatedAt:   tokenCreatedAt,
+			TokenExpiresAt:   tokenExpiresAt,
+			RandomFieldName:  randName,
+			RandomFieldValue: randValue,
+		})
+
+		router := chi.NewRouter()
+		router.With(server.preflightCheck).Post("/send/{formID}/{hash}", server.HandlerAPISendFormPost)
+		buf := bytes.NewBuffer(nil)
+		writer := multipart.NewWriter(buf)
+		_ = writer.WriteField("message", "this is a test message")
+		_ = writer.WriteField("email", "example@example.com")
+		_ = writer.Close()
+		req := httptest.NewRequest(http.MethodPost, "/send/testform_toml_random/"+computedHash, buf)
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+		req.TLS = &tls.ConnectionState{}
+		req.Header.Set("Origin", origin)
+		req.Header.Set("X-Form-Random-Field", "true")
+		recorder := httptest.NewRecorder()
+		router.ServeHTTP(recorder, req)
+		if recorder.Code != http.StatusNotFound {
+			t.Errorf("expected status code %d, got: %d", http.StatusNotFound, recorder.Code)
 		}
 	})
 }
@@ -1179,6 +1292,37 @@ func TestServer_csvFromFields(t *testing.T) {
 		writer.maxBytes = 1
 		if err = server.csvFromFields(writer, req); err == nil {
 			t.Error("expected CSV generation to fail")
+		}
+	})
+}
+
+func TestServer_failsAntiSpamField(t *testing.T) {
+	server, err := testServer(t, slog.LevelDebug, io.Discard)
+	if err != nil {
+		t.Fatalf("failed to create test server: %s", err)
+	}
+	t.Run("does not fail with all data present", func(t *testing.T) {
+		name := "_key"
+		value := "value"
+		submission := map[string][]string{name: {value}}
+		if server.failsAntiSpamField(name, value, submission) {
+			t.Error("expected anti-spam field to not fail")
+		}
+	})
+	t.Run("fails on no submission fieldset", func(t *testing.T) {
+		name := "_key"
+		value := "value"
+		submission := map[string][]string{}
+		if !server.failsAntiSpamField(name, value, submission) {
+			t.Error("expected anti-spam field to fail")
+		}
+	})
+	t.Run("fails on wrong value in submission fieldset", func(t *testing.T) {
+		name := "_key"
+		value := "value"
+		submission := map[string][]string{name: {"wrong"}}
+		if !server.failsAntiSpamField(name, value, submission) {
+			t.Error("expected anti-spam field to fail")
 		}
 	})
 }
