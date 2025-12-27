@@ -30,10 +30,13 @@ type Server struct {
 	mux        *chi.Mux
 }
 
+var Version = "dev"
+
 // New returns a new server instance
-func New(conf *config.Config, log *logger.Logger) *Server {
+func New(conf *config.Config, log *logger.Logger, ver string) *Server {
 	mux := chi.NewMux()
 	listenAddr := net.JoinHostPort(conf.Server.BindAddress, conf.Server.BindPort)
+	Version = ver
 
 	return &Server{
 		cache:      cache.New(conf.Server.CacheLifetime),

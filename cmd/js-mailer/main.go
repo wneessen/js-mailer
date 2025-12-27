@@ -54,7 +54,7 @@ func main() {
 	log := logger.New(conf.Log.Level, conf.Log.Format)
 
 	// Initalize server instance
-	srv := server.New(conf, log)
+	srv := server.New(conf, log, version)
 
 	// Start server
 	log.Info("starting js-mailer service", slog.String("version", version),

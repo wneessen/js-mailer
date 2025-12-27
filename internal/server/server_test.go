@@ -34,7 +34,10 @@ import (
 	"github.com/wneessen/js-mailer/internal/testhelper"
 )
 
-const testBasePort = 65000
+const (
+	testBasePort = 65000
+	testVersion  = "0.0.1"
+)
 
 var testPortInc atomic.Int32
 
@@ -45,7 +48,7 @@ func TestNew(t *testing.T) {
 			t.Fatalf("failed to create config: %s", err)
 		}
 		log := logger.New(slog.LevelError, "text")
-		server := New(conf, log)
+		server := New(conf, log, testVersion)
 		if server == nil {
 			t.Fatal("server is nil")
 		}
@@ -479,6 +482,32 @@ func TestServer_preflightCheck(t *testing.T) {
 
 		if recorder.Code != http.StatusBadRequest {
 			t.Errorf("expected status code %d, got: %d", http.StatusForbidden, recorder.Code)
+		}
+	})
+}
+
+func TestServer_serverHeader(t *testing.T) {
+	t.Run("server header is set", func(t *testing.T) {
+		server, err := testServer(t, slog.LevelDebug, io.Discard)
+		if err != nil {
+			t.Fatalf("failed to create test server: %s", err)
+		}
+		server.config.Forms.Path = "../../testdata"
+
+		router := chi.NewRouter()
+		router.With(server.serverHeader).Options("/ping", server.HandlerAPIPingGet)
+
+		req := httptest.NewRequest(http.MethodOptions, "/ping", nil)
+		req.TLS = &tls.ConnectionState{}
+		recorder := httptest.NewRecorder()
+		router.ServeHTTP(recorder, req)
+
+		if recorder.Code != http.StatusOK {
+			t.Errorf("expected status code %d, got: %d", http.StatusOK, recorder.Code)
+		}
+		want := "js-mailer/0.0.1"
+		if recorder.Header().Get("server") != want {
+			t.Errorf("expected server header %s, got: %s", want, recorder.Header().Get("server"))
 		}
 	})
 }
@@ -1339,7 +1368,7 @@ func testServer(t *testing.T, level slog.Level, output io.Writer) (*Server, erro
 	testPortInc.Add(1)
 	conf.Server.BindPort = fmt.Sprintf("%d", testBasePort+testPortInc.Load())
 
-	server := New(conf, log)
+	server := New(conf, log, testVersion)
 	if server == nil {
 		t.Fatal("server is nil")
 	}
