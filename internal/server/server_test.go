@@ -388,7 +388,7 @@ func TestServer_HandlerAPITokenGet(t *testing.T) {
 		if params.RandomFieldValue == "" {
 			t.Error("expected random field value to be set")
 		}
-		want := `<input type="hidden" name="_` + params.RandomFieldName + `" value="` +
+		want := `<input type="hidden" name="` + params.RandomFieldName + `" value="` +
 			params.RandomFieldValue + `">`
 		if body.Data.RandomField == "" {
 			t.Error("expected random field to be set in token response")
@@ -824,7 +824,7 @@ func TestServer_HandlerAPISendFormPost(t *testing.T) {
 			tokenExpiresAt.UnixNano(), form.ID, form.Secret)
 		hasher.Write([]byte(value))
 		computedHash := fmt.Sprintf("%x", hasher.Sum(nil))
-		server, err := testServer(t, slog.LevelDebug, os.Stderr)
+		server, err := testServer(t, slog.LevelDebug, io.Discard)
 		if err != nil {
 			t.Fatalf("failed to create test server: %s", err)
 		}
@@ -1224,7 +1224,7 @@ func TestServer_validateCaptcha(t *testing.T) {
 }
 
 func TestServer_csvFromFields(t *testing.T) {
-	server, err := testServer(t, slog.LevelDebug, os.Stderr)
+	server, err := testServer(t, slog.LevelDebug, io.Discard)
 	if err != nil {
 		t.Fatalf("failed to create test server: %s", err)
 	}
