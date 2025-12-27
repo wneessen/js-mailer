@@ -123,7 +123,8 @@ func (s *Server) HandlerAPISendFormPost(w http.ResponseWriter, r *http.Request) 
 	if form.Validation.RandomAntiSpamField {
 		fails := s.failsAntiSpamField(params.RandomFieldName, params.RandomFieldValue, r.MultipartForm.Value)
 		if fails {
-			s.log.Warn("submitted values did not pass random anti spam field validation")
+			s.log.Warn("submitted values did not pass random anti spam field validation",
+				slog.String("field", params.RandomFieldName), slog.String("value", params.RandomFieldValue))
 			_ = render.Render(w, r, ErrNotFound(ErrInvalidFormIDOrToken))
 			return
 		}
