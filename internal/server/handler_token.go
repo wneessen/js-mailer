@@ -92,7 +92,7 @@ func (s *Server) HandlerAPITokenGet(w http.ResponseWriter, r *http.Request) {
 	s.cache.Set(hash, form, cache.ItemParams{
 		TokenCreatedAt:   now,
 		TokenExpiresAt:   expire,
-		RandomFieldName:  randName,
+		RandomFieldName:  "_" + randName,
 		RandomFieldValue: randValue,
 	})
 
