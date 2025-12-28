@@ -30,22 +30,24 @@ func main() {
 		syscall.SIGABRT, os.Interrupt)
 	defer cancel()
 
-	// Read default config
-	conf, err := config.New()
-	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "failed to load default config: %s\n", err)
-		os.Exit(1)
-	}
+	var conf *config.Config
+	var err error
 
-	// Check if config file was specified
 	confPath := flag.String("config", "", "path to the config file")
 	flag.Parse()
-	if *confPath != "" {
+	switch {
+	case confPath != nil && *confPath != "":
 		file := filepath.Base(*confPath)
 		path := filepath.Dir(*confPath)
 		conf, err = config.NewFromFile(path, file)
 		if err != nil {
 			_, _ = fmt.Fprintf(os.Stderr, "failed to load config from file: %s\n", err)
+			os.Exit(1)
+		}
+	default:
+		conf, err = config.New()
+		if err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "failed to load default config: %s\n", err)
 			os.Exit(1)
 		}
 	}
