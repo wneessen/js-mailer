@@ -1496,9 +1496,11 @@ type errCache struct{}
 func (e *errCache) Get(string) (*forms.Form, cache.ItemParams, error) {
 	return nil, cache.ItemParams{}, errors.New("method Get() is intentionally failing")
 }
+
 func (e *errCache) Set(string, *forms.Form, cache.ItemParams) error {
 	return errors.New("method Set() is intentionally failing")
 }
+
 func (e *errCache) Remove(string) error {
 	return errors.New("method Remove() is intentionally failing")
 }

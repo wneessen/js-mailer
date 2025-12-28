@@ -89,12 +89,15 @@ func (s *Server) HandlerAPITokenGet(w http.ResponseWriter, r *http.Request) {
 		ReqMethod:   http.MethodPost,
 		RandomField: randHTML,
 	}
-	s.cache.Set(hash, form, cache.ItemParams{
+	if err = s.cache.Set(hash, form, cache.ItemParams{
 		TokenCreatedAt:   now,
 		TokenExpiresAt:   expire,
 		RandomFieldName:  "_" + randName,
 		RandomFieldValue: randValue,
-	})
+	}); err != nil {
+		_ = render.Render(w, r, ErrUnexpected(err))
+		return
+	}
 
 	resp := NewResponse(http.StatusCreated, "sender token successfully created", token)
 	if renderErr := render.Render(w, r, resp); renderErr != nil {
