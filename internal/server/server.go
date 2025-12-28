@@ -16,13 +16,14 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/wneessen/js-mailer/internal/cache"
+	"github.com/wneessen/js-mailer/internal/cache/inmemory"
 	"github.com/wneessen/js-mailer/internal/config"
 	"github.com/wneessen/js-mailer/internal/httpclient"
 	"github.com/wneessen/js-mailer/internal/logger"
 )
 
 type Server struct {
-	cache      *cache.Cache
+	cache      cache.Cache
 	config     *config.Config
 	httpClient *httpclient.Client
 	httpSrv    *http.Server
@@ -38,8 +39,14 @@ func New(conf *config.Config, log *logger.Logger, ver string) *Server {
 	listenAddr := net.JoinHostPort(conf.Server.BindAddress, conf.Server.BindPort)
 	Version = ver
 
+	var formCache cache.Cache
+	switch conf.Cache.Type {
+	default:
+		formCache = inmemory.New(conf.Cache.Lifetime)
+	}
+
 	return &Server{
-		cache:      cache.New(conf.Server.CacheLifetime),
+		cache:      formCache,
 		config:     conf,
 		httpClient: httpclient.New(log),
 		httpSrv: &http.Server{

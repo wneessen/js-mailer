@@ -13,18 +13,19 @@ import (
 const (
 	testLogLevel               = 0
 	testLogFormat              = "json"
-	testFormsPath              = "testdata"
+	testFormsPath              = "../../testdata"
 	testFormsDefaultExpiration = time.Minute * 15
 	testServerAddress          = "0.0.0.0"
 	testServerPort             = "8080"
-	testServerCacheLifetime    = time.Minute * 30
+	testCacheLifetime          = time.Minute * 30
+	testCacheType              = "inmemory"
 	testServerTimeout          = time.Second * 20
 )
 
 func TestNew(t *testing.T) {
 	t.Run("the default config is returned", func(t *testing.T) {
-		t.Setenv("HOME", "../../testdata")
-		t.Setenv("JSMAILER_FORMS_PATH", "../../testdata")
+		t.Setenv("HOME", testFormsPath)
+		t.Setenv("JSMAILER_FORMS_PATH", testFormsPath)
 		config, err := New()
 		if err != nil {
 			t.Fatalf("failed to create config: %s", err)
@@ -35,8 +36,8 @@ func TestNew(t *testing.T) {
 		if config.Log.Format != "json" {
 			t.Errorf("expected log format to be %s, got %s", testLogFormat, config.Log.Format)
 		}
-		if config.Forms.Path != "../../testdata" {
-			t.Errorf("expected forms path to be %s, got %s", "../../testdata", config.Forms.Path)
+		if config.Forms.Path != testFormsPath {
+			t.Errorf("expected forms path to be %s, got %s", testFormsPath, config.Forms.Path)
 		}
 		if config.Forms.DefaultExpiration != testFormsDefaultExpiration {
 			t.Errorf("expected forms default expiration to be %s, got %s", testFormsDefaultExpiration,
@@ -49,9 +50,12 @@ func TestNew(t *testing.T) {
 		if config.Server.BindPort != testServerPort {
 			t.Errorf("expected server bind port to be %s, got %s", testServerPort, config.Server.BindPort)
 		}
-		if config.Server.CacheLifetime != testServerCacheLifetime {
-			t.Errorf("expected server cache lifetime to be %s, got %s", testServerCacheLifetime,
-				config.Server.CacheLifetime)
+		if config.Cache.Type != testCacheType {
+			t.Errorf("expected cache type to be %s, got %s", testCacheType, config.Cache.Type)
+		}
+		if config.Cache.Lifetime != testCacheLifetime {
+			t.Errorf("expected cache lifetime to be %s, got %s", testCacheLifetime,
+				config.Cache.Lifetime)
 		}
 		if config.Server.Timeout != testServerTimeout {
 			t.Errorf("expected server timeout to be %s, got %s", testServerTimeout, config.Server.Timeout)

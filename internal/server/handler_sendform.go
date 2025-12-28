@@ -67,7 +67,12 @@ func (s *Server) HandlerAPISendFormPost(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Make sure the form exists and is valid
-	defer s.cache.Remove(hash)
+	defer func() {
+		if err = s.cache.Remove(hash); err != nil {
+			s.log.Error("failed to remove form config from cache", logger.Err(err),
+				slog.String("formID", formID))
+		}
+	}()
 	form, params, err := s.formFromCache(hash)
 	if err != nil {
 		s.log.Error("failed to validate requested form", logger.Err(err), slog.String("formID", formID),
@@ -175,8 +180,11 @@ func (s *Server) HandlerAPISendFormPost(w http.ResponseWriter, r *http.Request) 
 
 // formFromCache returns the form configuration from the cache.
 func (s *Server) formFromCache(hash string) (*forms.Form, cache.ItemParams, error) {
-	form, params, ok := s.cache.Get(hash)
-	if !ok || form == nil {
+	form, params, err := s.cache.Get(hash)
+	if err != nil {
+		return nil, params, fmt.Errorf("failed to get form config from cache: %w", err)
+	}
+	if form == nil {
 		return nil, params, errors.New("form config not found in cache")
 	}
 

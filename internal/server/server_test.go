@@ -381,9 +381,9 @@ func TestServer_HandlerAPITokenGet(t *testing.T) {
 		if err = json.NewDecoder(recorder.Body).Decode(&body); err != nil {
 			t.Fatalf("failed to decode JSON response: %s", err)
 		}
-		_, params, ok := server.cache.Get(body.Data.Token)
-		if !ok {
-			t.Error("expected to find form in cache")
+		_, params, err := server.cache.Get(body.Data.Token)
+		if err != nil {
+			t.Errorf("failed to get form from cache: %s", err)
 		}
 		if params.RandomFieldName == "" {
 			t.Error("expected random field name to be set")
@@ -398,6 +398,27 @@ func TestServer_HandlerAPITokenGet(t *testing.T) {
 		}
 		if body.Data.RandomField != want {
 			t.Errorf("expected random field %s, got: %s", want, body.Data.RandomField)
+		}
+	})
+	t.Run("token response fails due to error from cache", func(t *testing.T) {
+		server, err := testServer(t, slog.LevelDebug, io.Discard)
+		if err != nil {
+			t.Fatalf("failed to create test server: %s", err)
+		}
+		server.config.Forms.Path = "../../testdata"
+		server.cache = new(errCache)
+
+		router := chi.NewRouter()
+		router.With(server.preflightCheck).Get("/token/{formID}", server.HandlerAPITokenGet)
+
+		req := httptest.NewRequest(http.MethodGet, "/token/testform_toml", nil)
+		req.TLS = &tls.ConnectionState{}
+		req.Header.Set("Origin", "https://example.com")
+		recorder := httptest.NewRecorder()
+		router.ServeHTTP(recorder, req)
+
+		if recorder.Code != http.StatusInternalServerError {
+			t.Errorf("expected status code %d, got: %d", http.StatusInternalServerError, recorder.Code)
 		}
 	})
 }
@@ -701,10 +722,12 @@ func TestServer_HandlerAPISendFormPost(t *testing.T) {
 				"hash does not match",
 				func(server *Server, router chi.Router) {
 					router.With(server.preflightCheck).Post("/send/{formID}/{hash}", server.HandlerAPISendFormPost)
-					server.cache.Set("9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08", &forms.Form{}, cache.ItemParams{
+					if err = server.cache.Set("9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08", &forms.Form{}, cache.ItemParams{
 						TokenCreatedAt: time.Now(),
 						TokenExpiresAt: time.Now().Add(time.Minute),
-					})
+					}); err != nil {
+						t.Errorf("failed to set cache item: %s", err)
+					}
 				},
 				func(string) *http.Request {
 					buf := bytes.NewBuffer(nil)
@@ -770,6 +793,46 @@ func TestServer_HandlerAPISendFormPost(t *testing.T) {
 				},
 				http.StatusBadRequest,
 			},
+			{
+				"cache returns nil",
+				func(server *Server, router chi.Router) {
+					server.cache = new(nilCache)
+					router.With(server.preflightCheck).Post("/send/{formID}/{hash}", server.HandlerAPISendFormPost)
+				},
+				func(hash string) *http.Request {
+					buf := bytes.NewBuffer(nil)
+					writer := multipart.NewWriter(buf)
+					_ = writer.WriteField("email", "example@example.com")
+					_ = writer.WriteField("message", "this is a test message")
+					_ = writer.Close()
+					req := httptest.NewRequest(http.MethodPost, "/send/testform_toml/"+hash, buf)
+					req.Header.Set("Content-Type", writer.FormDataContentType())
+					req.TLS = &tls.ConnectionState{}
+					req.Header.Set("Origin", origin)
+					return req
+				},
+				http.StatusNotFound,
+			},
+			{
+				"cache returns error",
+				func(server *Server, router chi.Router) {
+					server.cache = new(errCache)
+					router.With(server.preflightCheck).Post("/send/{formID}/{hash}", server.HandlerAPISendFormPost)
+				},
+				func(hash string) *http.Request {
+					buf := bytes.NewBuffer(nil)
+					writer := multipart.NewWriter(buf)
+					_ = writer.WriteField("email", "example@example.com")
+					_ = writer.WriteField("message", "this is a test message")
+					_ = writer.Close()
+					req := httptest.NewRequest(http.MethodPost, "/send/testform_toml/"+hash, buf)
+					req.Header.Set("Content-Type", writer.FormDataContentType())
+					req.TLS = &tls.ConnectionState{}
+					req.Header.Set("Origin", origin)
+					return req
+				},
+				http.StatusNotFound,
+			},
 		}
 
 		for _, tt := range tests {
@@ -779,12 +842,14 @@ func TestServer_HandlerAPISendFormPost(t *testing.T) {
 					t.Fatalf("failed to create test server: %s", err)
 				}
 				server.config.Forms.Path = "../../testdata"
-				server.cache.Set(computedHash, form, cache.ItemParams{
+				if err = server.cache.Set(computedHash, form, cache.ItemParams{
 					TokenCreatedAt:   tokenCreatedAt,
 					TokenExpiresAt:   tokenExpiresAt,
 					RandomFieldName:  randName,
 					RandomFieldValue: randValue,
-				})
+				}); err != nil {
+					t.Errorf("failed to set cache item: %s", err)
+				}
 
 				router := chi.NewRouter()
 				tt.routerFn(server, router)
@@ -817,10 +882,12 @@ func TestServer_HandlerAPISendFormPost(t *testing.T) {
 			t.Fatalf("failed to create test server: %s", err)
 		}
 		server.config.Forms.Path = "../../testdata"
-		server.cache.Set(computedHash, form, cache.ItemParams{
+		if err = server.cache.Set(computedHash, form, cache.ItemParams{
 			TokenCreatedAt: tokenCreatedAt,
 			TokenExpiresAt: tokenExpiresAt,
-		})
+		}); err != nil {
+			t.Errorf("failed to set cache item: %s", err)
+		}
 
 		router := chi.NewRouter()
 		router.With(server.preflightCheck).Post("/send/{formID}/{hash}", server.HandlerAPISendFormPost)
@@ -858,12 +925,14 @@ func TestServer_HandlerAPISendFormPost(t *testing.T) {
 			t.Fatalf("failed to create test server: %s", err)
 		}
 		server.config.Forms.Path = "../../testdata"
-		server.cache.Set(computedHash, form, cache.ItemParams{
+		if err = server.cache.Set(computedHash, form, cache.ItemParams{
 			TokenCreatedAt:   tokenCreatedAt,
 			TokenExpiresAt:   tokenExpiresAt,
 			RandomFieldName:  randName,
 			RandomFieldValue: randValue,
-		})
+		}); err != nil {
+			t.Errorf("failed to set cache item: %s", err)
+		}
 
 		router := chi.NewRouter()
 		router.With(server.preflightCheck).Post("/send/{formID}/{hash}", server.HandlerAPISendFormPost)
@@ -1430,3 +1499,31 @@ func (w *failWriter) Write(p []byte) (n int, err error) {
 	w.written += len(p)
 	return len(p), nil
 }
+
+// nilCache statisfies the cache.Cache interface and returns nil for any action
+type nilCache struct{}
+
+func (n *nilCache) Get(string) (*forms.Form, cache.ItemParams, error) {
+	return nil, cache.ItemParams{}, nil
+}
+func (n *nilCache) Set(string, *forms.Form, cache.ItemParams) error { return nil }
+func (n *nilCache) Remove(string) error                             { return nil }
+func (n *nilCache) Start()                                          {}
+func (n *nilCache) Stop()                                           {}
+
+// errCache statisfies the cache.Cache interface and returns an error for any action
+type errCache struct{}
+
+func (e *errCache) Get(string) (*forms.Form, cache.ItemParams, error) {
+	return nil, cache.ItemParams{}, errors.New("method Get() is intentionally failing")
+}
+
+func (e *errCache) Set(string, *forms.Form, cache.ItemParams) error {
+	return errors.New("method Set() is intentionally failing")
+}
+
+func (e *errCache) Remove(string) error {
+	return errors.New("method Remove() is intentionally failing")
+}
+func (e *errCache) Start() {}
+func (e *errCache) Stop()  {}
