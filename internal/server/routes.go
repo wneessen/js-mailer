@@ -33,11 +33,16 @@ func (s *Server) routes(_ context.Context) {
 			},
 			Schema:        logFormat,
 			RecoverPanics: true,
+			LogExtraAttrs: func(req *http.Request, reqBody string, respStatus int) []slog.Attr {
+				reqID := middleware.GetReqID(req.Context())
+				return []slog.Attr{slog.String("request_id", reqID)}
+			},
 		},
 	)
 
 	// Register middleware
 	s.mux.Use(s.serverHeader)
+	s.mux.Use(middleware.RequestID)
 	s.mux.Use(middleware.RealIP)
 	s.mux.Use(middleware.StripSlashes)
 	s.mux.Use(middleware.Compress(5))

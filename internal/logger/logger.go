@@ -7,8 +7,11 @@ package logger
 import (
 	"io"
 	"log/slog"
+	"net/http"
 	"os"
 	"strings"
+
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 type Logger struct {
@@ -30,4 +33,8 @@ func NewLogger(level slog.Level, format string, output io.Writer) *Logger {
 
 func Err(err error) slog.Attr {
 	return slog.Any("error", err)
+}
+
+func RequestID(r *http.Request) slog.Attr {
+	return slog.String("request_id", middleware.GetReqID(r.Context()))
 }

@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 
 	"github.com/wneessen/js-mailer/internal/cache"
 	"github.com/wneessen/js-mailer/internal/config"
@@ -110,6 +111,7 @@ func TestServer_HandlerAPIPingGet(t *testing.T) {
 		}
 
 		router := chi.NewRouter()
+		router.Use(middleware.RequestID)
 		router.Get("/ping", server.HandlerAPIPingGet)
 
 		req := httptest.NewRequest(http.MethodGet, "/ping", nil)
@@ -122,11 +124,11 @@ func TestServer_HandlerAPIPingGet(t *testing.T) {
 
 		type response struct {
 			Success    bool         `json:"success"`
-			StatusCode int          `json:"statusCode"`
+			StatusCode int          `json:"status_code"`
 			Status     string       `json:"status"`
 			Message    string       `json:"message,omitempty"`
 			Timestamp  time.Time    `json:"timestamp"`
-			RequestID  string       `json:"requestId,omitempty"`
+			RequestID  string       `json:"request_id,omitempty"`
 			Data       PingResponse `json:"data,omitempty"`
 			Errors     []string     `json:"errors,omitempty"`
 		}
@@ -150,6 +152,9 @@ func TestServer_HandlerAPIPingGet(t *testing.T) {
 		}
 		if body.Timestamp.IsZero() {
 			t.Errorf("expected timestamp to be set, got: %s", body.Timestamp)
+		}
+		if body.RequestID == "" {
+			t.Error("expected request ID to be set")
 		}
 		if len(body.Errors) != 0 {
 			t.Errorf("expected no errors, got: %v", body.Errors)
@@ -184,11 +189,11 @@ func TestServer_HandlerAPITokenGet(t *testing.T) {
 
 		type response struct {
 			Success    bool          `json:"success"`
-			StatusCode int           `json:"statusCode"`
+			StatusCode int           `json:"status_code"`
 			Status     string        `json:"status"`
 			Message    string        `json:"message,omitempty"`
 			Timestamp  time.Time     `json:"timestamp"`
-			RequestID  string        `json:"requestId,omitempty"`
+			RequestID  string        `json:"request_id,omitempty"`
 			Data       TokenResponse `json:"data,omitempty"`
 			Errors     []string      `json:"errors,omitempty"`
 		}
@@ -369,11 +374,11 @@ func TestServer_HandlerAPITokenGet(t *testing.T) {
 
 		type response struct {
 			Success    bool          `json:"success"`
-			StatusCode int           `json:"statusCode"`
+			StatusCode int           `json:"status_code"`
 			Status     string        `json:"status"`
 			Message    string        `json:"message,omitempty"`
 			Timestamp  time.Time     `json:"timestamp"`
-			RequestID  string        `json:"requestId,omitempty"`
+			RequestID  string        `json:"request_id,omitempty"`
 			Data       TokenResponse `json:"data,omitempty"`
 			Errors     []string      `json:"errors,omitempty"`
 		}
@@ -575,11 +580,11 @@ func TestServer_HandlerAPISendFormPost(t *testing.T) {
 
 		type sendResponse struct {
 			Success    bool         `json:"success"`
-			StatusCode int          `json:"statusCode"`
+			StatusCode int          `json:"status_code"`
 			Status     string       `json:"status"`
 			Message    string       `json:"message,omitempty"`
 			Timestamp  time.Time    `json:"timestamp"`
-			RequestID  string       `json:"requestId,omitempty"`
+			RequestID  string       `json:"request_id,omitempty"`
 			Data       SendResponse `json:"data,omitempty"`
 			Errors     []string     `json:"errors,omitempty"`
 		}

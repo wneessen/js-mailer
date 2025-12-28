@@ -48,6 +48,7 @@ var (
 )
 
 func (s *Server) HandlerAPISendFormPost(w http.ResponseWriter, r *http.Request) {
+	log := s.log.With(logger.RequestID(r))
 	formID := chi.URLParam(r, "formID")
 	hash := chi.URLParam(r, "hash")
 	if formID == "" || hash == "" {
@@ -56,12 +57,12 @@ func (s *Server) HandlerAPISendFormPost(w http.ResponseWriter, r *http.Request) 
 	}
 	providedHash, err := hex.DecodeString(hash)
 	if err != nil {
-		s.log.Error("failed to decode provided form token hash", logger.Err(err))
+		log.Error("failed to decode provided form token hash", logger.Err(err))
 		_ = render.Render(w, r, ErrBadRequest(ErrInvalidFormIDOrToken))
 		return
 	}
 	if len(providedHash) != sha256.Size {
-		s.log.Error("invalid form token hash length", slog.Int("length", len(providedHash)))
+		log.Error("invalid form token hash length", slog.Int("length", len(providedHash)))
 		_ = render.Render(w, r, ErrBadRequest(ErrInvalidFormIDOrToken))
 		return
 	}
@@ -69,13 +70,13 @@ func (s *Server) HandlerAPISendFormPost(w http.ResponseWriter, r *http.Request) 
 	// Make sure the form exists and is valid
 	defer func() {
 		if err = s.cache.Remove(hash); err != nil {
-			s.log.Error("failed to remove form config from cache", logger.Err(err),
+			log.Error("failed to remove form config from cache", logger.Err(err),
 				slog.String("formID", formID))
 		}
 	}()
 	form, params, err := s.formFromCache(hash)
 	if err != nil {
-		s.log.Error("failed to validate requested form", logger.Err(err), slog.String("formID", formID),
+		log.Error("failed to validate requested form", logger.Err(err), slog.String("formID", formID),
 			slog.String("hash", hash))
 		_ = render.Render(w, r, ErrNotFound(ErrInvalidFormIDOrToken))
 		return
@@ -90,14 +91,14 @@ func (s *Server) HandlerAPISendFormPost(w http.ResponseWriter, r *http.Request) 
 	hasher.Write([]byte(value))
 	computedHash := hasher.Sum(nil)
 	if subtle.ConstantTimeCompare(computedHash, providedHash) != 1 {
-		s.log.Error("invalid form token", slog.String("formID", formID), slog.String("hash", hash))
+		log.Error("invalid form token", slog.String("formID", formID), slog.String("hash", hash))
 		_ = render.Render(w, r, ErrNotFound(ErrInvalidFormIDOrToken))
 		return
 	}
 
 	// Parse the form submission
 	if err = r.ParseMultipartForm(formMaxMemory); err != nil {
-		s.log.Error("failed to parse form submission", logger.Err(err))
+		log.Error("failed to parse form submission", logger.Err(err))
 		_ = render.Render(w, r, ErrUnexpected(ErrFailedToParseForm))
 		return
 	}
@@ -105,7 +106,7 @@ func (s *Server) HandlerAPISendFormPost(w http.ResponseWriter, r *http.Request) 
 	// Check the submission speed
 	if !form.Validation.DisableSubmissionSpeedCheck {
 		if time.Since(tokenCreatedAt) < formSubmissionSpeed {
-			s.log.Error("form was submitted too fast", slog.String("formID", formID),
+			log.Error("form was submitted too fast", slog.String("formID", formID),
 				slog.String("hash", hash),
 				slog.String("submission_speed", time.Since(tokenCreatedAt).String()),
 			)
@@ -118,7 +119,7 @@ func (s *Server) HandlerAPISendFormPost(w http.ResponseWriter, r *http.Request) 
 	if form.Validation.Honeypot != "" {
 		fails := s.failsHoneypot(form.Validation.Honeypot, r.MultipartForm.Value)
 		if fails {
-			s.log.Warn("submitted values did not pass honeypot validation")
+			log.Warn("submitted values did not pass honeypot validation")
 			_ = render.Render(w, r, ErrNotFound(ErrInvalidFormIDOrToken))
 			return
 		}
@@ -128,7 +129,7 @@ func (s *Server) HandlerAPISendFormPost(w http.ResponseWriter, r *http.Request) 
 	if form.Validation.RandomAntiSpamField {
 		fails := s.failsAntiSpamField(params.RandomFieldName, params.RandomFieldValue, r.MultipartForm.Value)
 		if fails {
-			s.log.Warn("submitted values did not pass random anti spam field validation",
+			log.Warn("submitted values did not pass random anti spam field validation",
 				slog.String("field", params.RandomFieldName), slog.String("value", params.RandomFieldValue))
 			_ = render.Render(w, r, ErrNotFound(ErrInvalidFormIDOrToken))
 			return
@@ -139,7 +140,7 @@ func (s *Server) HandlerAPISendFormPost(w http.ResponseWriter, r *http.Request) 
 	if len(form.Validation.Fields) > 0 {
 		fails, missingFields := s.failsRequiredFields(form.Validation.Fields, r.MultipartForm.Value)
 		if fails {
-			s.log.Warn("submitted values did not pass required field validation")
+			log.Warn("submitted values did not pass required field validation")
 			errList := []error{ErrRequiredFieldsValidationFailed}
 			for field, msg := range missingFields {
 				errList = append(errList, fmt.Errorf("%s: %s", field, msg))
@@ -151,7 +152,7 @@ func (s *Server) HandlerAPISendFormPost(w http.ResponseWriter, r *http.Request) 
 
 	// Check form submission against the configured captcha provider
 	if err = s.validateCaptcha(r.Context(), form, r.MultipartForm.Value, r.RemoteAddr); err != nil {
-		s.log.Error("captcha validation failed", logger.Err(err))
+		log.Error("captcha validation failed", logger.Err(err))
 		_ = render.Render(w, r, ErrNotFound(ErrCaptchaValidationFailed))
 		return
 	}
@@ -160,7 +161,7 @@ func (s *Server) HandlerAPISendFormPost(w http.ResponseWriter, r *http.Request) 
 	now := time.Now()
 	confirmationResponse, messageResponse, err := s.sendMail(r, form)
 	if err != nil {
-		s.log.Error("failed to send form mail", logger.Err(err))
+		log.Error("failed to send form mail", logger.Err(err))
 		_ = render.Render(w, r, ErrUnexpected(err))
 		return
 	}
@@ -174,8 +175,10 @@ func (s *Server) HandlerAPISendFormPost(w http.ResponseWriter, r *http.Request) 
 
 	resp := NewResponse(http.StatusOK, "form mail successfully delivered", sendRes)
 	if renderErr := render.Render(w, r, resp); renderErr != nil {
-		s.log.Error("failed to render SendResponse", logger.Err(renderErr))
+		log.Error("failed to render SendResponse", logger.Err(renderErr))
 	}
+	log.Info("form mail successfully delivered", slog.String("formID", form.ID),
+		slog.String("hash", hash))
 }
 
 // formFromCache returns the form configuration from the cache.
