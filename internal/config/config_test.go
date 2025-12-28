@@ -80,7 +80,7 @@ func TestNew(t *testing.T) {
 			t.Fatal("expected error when no home directory is set")
 		}
 	})
-	t.Run("config with a home directory but no configs but enviornment", func(t *testing.T) {
+	t.Run("config with a home directory but no configs but environment", func(t *testing.T) {
 		tempDir := t.TempDir()
 		t.Cleanup(func() {
 			if err := os.RemoveAll(tempDir); err != nil {
