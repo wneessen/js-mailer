@@ -783,7 +783,26 @@ func TestServer_HandlerAPISendFormPost(t *testing.T) {
 					writer := multipart.NewWriter(buf)
 					_ = writer.WriteField("email", "example@example.com")
 					_ = writer.WriteField("message", "this is a test message")
-					_ = writer.WriteField("company", "Honeypot Inc.")
+					_ = writer.Close()
+					req := httptest.NewRequest(http.MethodPost, "/send/testform_toml/"+hash, buf)
+					req.Header.Set("Content-Type", writer.FormDataContentType())
+					req.TLS = &tls.ConnectionState{}
+					req.Header.Set("Origin", origin)
+					return req
+				},
+				http.StatusNotFound,
+			},
+			{
+				"cache returns error",
+				func(server *Server, router chi.Router) {
+					server.cache = new(errCache)
+					router.With(server.preflightCheck).Post("/send/{formID}/{hash}", server.HandlerAPISendFormPost)
+				},
+				func(hash string) *http.Request {
+					buf := bytes.NewBuffer(nil)
+					writer := multipart.NewWriter(buf)
+					_ = writer.WriteField("email", "example@example.com")
+					_ = writer.WriteField("message", "this is a test message")
 					_ = writer.Close()
 					req := httptest.NewRequest(http.MethodPost, "/send/testform_toml/"+hash, buf)
 					req.Header.Set("Content-Type", writer.FormDataContentType())
