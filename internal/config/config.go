@@ -18,6 +18,10 @@ const configEnv = "JSMAILER"
 
 // Config represents the global config object struct
 type Config struct {
+	Cache struct {
+		Type     string        `fig:"type" default:"inmemory"`
+		Lifetime time.Duration `fig:"lifetime" default:"10m"`
+	}
 	Log struct {
 		Level  slog.Level `fig:"level" default:"0"`
 		Format string     `fig:"format" default:"json"`
@@ -29,10 +33,9 @@ type Config struct {
 	} `fig:"forms"`
 
 	Server struct {
-		BindAddress   string        `fig:"address" default:"127.0.0.1"`
-		BindPort      string        `fig:"port" default:"8765"`
-		CacheLifetime time.Duration `fig:"cache_lifetime" default:"10m"`
-		Timeout       time.Duration `fig:"timeout" default:"15s"`
+		BindAddress string        `fig:"address" default:"127.0.0.1"`
+		BindPort    string        `fig:"port" default:"8765"`
+		Timeout     time.Duration `fig:"timeout" default:"15s"`
 	} `fig:"server"`
 }
 
