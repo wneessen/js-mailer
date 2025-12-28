@@ -1048,7 +1048,7 @@ func TestServer_validateCaptcha(t *testing.T) {
 			false,
 		},
 		{
-			"private captcha without challange field",
+			"private captcha without challenge field",
 			testResponseFromFile(t, "../../testdata/private_captcha_success.json", http.StatusUnauthorized, false),
 			func(form *forms.Form) {
 				form.Validation.PrivateCaptcha.Enabled = true
