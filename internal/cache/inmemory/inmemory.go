@@ -45,7 +45,7 @@ func (i *InMemory) Start() {
 }
 
 // Set stores a value without TTL.
-func (i *InMemory) Set(key string, form *forms.Form, params cache.ItemParams) {
+func (i *InMemory) Set(key string, form *forms.Form, params cache.ItemParams) error {
 	i.mu.Lock()
 	i.items[key] = &item{
 		form:       form,
@@ -53,6 +53,7 @@ func (i *InMemory) Set(key string, form *forms.Form, params cache.ItemParams) {
 		expiration: time.Now().Add(i.ttl),
 	}
 	i.mu.Unlock()
+	return nil
 }
 
 // Get retrieves a value. Second return value indicates presence.

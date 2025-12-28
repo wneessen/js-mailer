@@ -44,10 +44,12 @@ func TestCache_Set(t *testing.T) {
 			t.Fatal("in-memory cache is nil")
 		}
 
-		inmem.Set(key, testForm, cache.ItemParams{
+		if err := inmem.Set(key, testForm, cache.ItemParams{
 			TokenCreatedAt: time.Now(),
 			TokenExpiresAt: time.Now().Add(interval),
-		})
+		}); err != nil {
+			t.Errorf("failed to set item in in-memory cache: %s", err)
+		}
 		if _, ok := inmem.items[key]; !ok {
 			t.Error("item was not added to the in-memory cache")
 		}
@@ -66,10 +68,12 @@ func TestCache_Get(t *testing.T) {
 			t.Fatal("in-memory cache is nil")
 		}
 
-		inmem.Set(key, testForm, cache.ItemParams{
+		if err := inmem.Set(key, testForm, cache.ItemParams{
 			TokenCreatedAt: now,
 			TokenExpiresAt: expireAt,
-		})
+		}); err != nil {
+			t.Errorf("failed to set item in in-memory cache: %s", err)
+		}
 		form, params, err := inmem.Get(key)
 		if err != nil {
 			t.Errorf("failed to get item from in-memory cache: %s", err)
@@ -91,7 +95,9 @@ func TestCache_Get(t *testing.T) {
 			t.Fatal("in-memory cache is nil")
 		}
 
-		inmem.Set(key, testForm, cache.ItemParams{TokenCreatedAt: now, TokenExpiresAt: expireAt})
+		if err := inmem.Set(key, testForm, cache.ItemParams{TokenCreatedAt: now, TokenExpiresAt: expireAt}); err != nil {
+			t.Errorf("failed to set item in in-memory cache: %s", err)
+		}
 		_, _, err := inmem.Get(key + "non-existing")
 		if err == nil {
 			t.Error("item was expected to not exist in the in-memory cache")
@@ -104,10 +110,12 @@ func TestCache_Get(t *testing.T) {
 			// Make sure the auto cleanup goroutine is stopped
 			inmem.Stop()
 
-			inmem.Set("key", testForm, cache.ItemParams{
+			if err := inmem.Set("key", testForm, cache.ItemParams{
 				TokenCreatedAt: time.Now(),
 				TokenExpiresAt: time.Now().Add(interval),
-			})
+			}); err != nil {
+				t.Errorf("failed to set item in in-memory cache: %s", err)
+			}
 			time.Sleep(interval + 1)
 			synctest.Wait()
 			_, _, err := inmem.Get("key")
@@ -129,7 +137,9 @@ func TestCache_Remove(t *testing.T) {
 			t.Fatal("in-memory cache is nil")
 		}
 
-		inmem.Set(key, testForm, cache.ItemParams{TokenCreatedAt: now, TokenExpiresAt: expireAt})
+		if err := inmem.Set(key, testForm, cache.ItemParams{TokenCreatedAt: now, TokenExpiresAt: expireAt}); err != nil {
+			t.Errorf("failed to set item in in-memory cache: %s", err)
+		}
 		if err := inmem.Remove(key); err != nil {
 			t.Errorf("failed to remove item from in-memory cache: %s", err)
 		}
@@ -147,10 +157,12 @@ func TestCache_cleanupLoop(t *testing.T) {
 		inmem.Start()
 		t.Cleanup(inmem.Stop)
 
-		inmem.Set("key", testForm, cache.ItemParams{
+		if err := inmem.Set("key", testForm, cache.ItemParams{
 			TokenCreatedAt: time.Now(),
 			TokenExpiresAt: time.Now().Add(interval),
-		})
+		}); err != nil {
+			t.Errorf("failed to set item in in-memory cache: %s", err)
+		}
 		time.Sleep(interval * 2)
 		synctest.Wait()
 		_, _, err := inmem.Get("key")

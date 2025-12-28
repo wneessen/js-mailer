@@ -12,7 +12,7 @@ import (
 
 type Cache interface {
 	Start()
-	Set(string, *forms.Form, ItemParams)
+	Set(string, *forms.Form, ItemParams) error
 	Get(string) (*forms.Form, ItemParams, error)
 	Remove(string) error
 	Stop()
