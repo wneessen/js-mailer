@@ -400,6 +400,27 @@ func TestServer_HandlerAPITokenGet(t *testing.T) {
 			t.Errorf("expected random field %s, got: %s", want, body.Data.RandomField)
 		}
 	})
+	t.Run("token response fails due to error from cache", func(t *testing.T) {
+		server, err := testServer(t, slog.LevelDebug, io.Discard)
+		if err != nil {
+			t.Fatalf("failed to create test server: %s", err)
+		}
+		server.config.Forms.Path = "../../testdata"
+		server.cache = new(errCache)
+
+		router := chi.NewRouter()
+		router.With(server.preflightCheck).Get("/token/{formID}", server.HandlerAPITokenGet)
+
+		req := httptest.NewRequest(http.MethodGet, "/token/testform_toml", nil)
+		req.TLS = &tls.ConnectionState{}
+		req.Header.Set("Origin", "https://example.com")
+		recorder := httptest.NewRecorder()
+		router.ServeHTTP(recorder, req)
+
+		if recorder.Code != http.StatusInternalServerError {
+			t.Errorf("expected status code %d, got: %d", http.StatusInternalServerError, recorder.Code)
+		}
+	})
 }
 
 func TestServer_preflightCheck(t *testing.T) {
