@@ -381,9 +381,9 @@ func TestServer_HandlerAPITokenGet(t *testing.T) {
 		if err = json.NewDecoder(recorder.Body).Decode(&body); err != nil {
 			t.Fatalf("failed to decode JSON response: %s", err)
 		}
-		_, params, ok := server.cache.Get(body.Data.Token)
-		if !ok {
-			t.Error("expected to find form in cache")
+		_, params, err := server.cache.Get(body.Data.Token)
+		if err != nil {
+			t.Errorf("failed to get form from cache: %s", err)
 		}
 		if params.RandomFieldName == "" {
 			t.Error("expected random field name to be set")
