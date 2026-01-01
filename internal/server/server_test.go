@@ -160,7 +160,6 @@ func TestServer_HandlerAPIPingGet(t *testing.T) {
 		}
 	})
 	t.Run("pong request should fail", func(t *testing.T) {
-
 		server, err := testServer(t, slog.LevelDebug, io.Discard)
 		if err != nil {
 			t.Fatalf("failed to create test server: %s", err)
