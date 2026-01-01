@@ -44,6 +44,7 @@ type TokenResponse struct {
 }
 
 func (s *Server) HandlerAPITokenGet(w http.ResponseWriter, r *http.Request) {
+	log := s.log.With(logger.RequestID(r))
 	formID := chi.URLParam(r, "formID")
 	if formID == "" {
 		_ = render.Render(w, r, ErrBadRequest(ErrNoFormID))
@@ -101,7 +102,7 @@ func (s *Server) HandlerAPITokenGet(w http.ResponseWriter, r *http.Request) {
 
 	resp := NewResponse(http.StatusCreated, "sender token successfully created", token)
 	if renderErr := render.Render(w, r, resp); renderErr != nil {
-		s.log.Error("failed to render TokenResposne", logger.Err(renderErr))
+		log.Error("failed to render TokenResposne", logger.Err(renderErr))
 	}
 }
 

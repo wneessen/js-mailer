@@ -108,13 +108,10 @@ func TestServer_HandlerAPIPingGet(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to create test server: %s", err)
 		}
-
-		router := chi.NewRouter()
-		router.Get("/ping", server.HandlerAPIPingGet)
-
+		server.routes(t.Context())
 		req := httptest.NewRequest(http.MethodGet, "/ping", nil)
 		recorder := httptest.NewRecorder()
-		router.ServeHTTP(recorder, req)
+		server.mux.ServeHTTP(recorder, req)
 
 		if recorder.Code != http.StatusOK {
 			t.Errorf("expected status code %d, got: %d", http.StatusOK, recorder.Code)
@@ -122,11 +119,11 @@ func TestServer_HandlerAPIPingGet(t *testing.T) {
 
 		type response struct {
 			Success    bool         `json:"success"`
-			StatusCode int          `json:"statusCode"`
+			StatusCode int          `json:"status_code"`
 			Status     string       `json:"status"`
 			Message    string       `json:"message,omitempty"`
 			Timestamp  time.Time    `json:"timestamp"`
-			RequestID  string       `json:"requestId,omitempty"`
+			RequestID  string       `json:"request_id,omitempty"`
 			Data       PingResponse `json:"data,omitempty"`
 			Errors     []string     `json:"errors,omitempty"`
 		}
@@ -151,12 +148,30 @@ func TestServer_HandlerAPIPingGet(t *testing.T) {
 		if body.Timestamp.IsZero() {
 			t.Errorf("expected timestamp to be set, got: %s", body.Timestamp)
 		}
+		if body.RequestID == "" {
+			t.Error("expected request ID to be set")
+		}
 		if len(body.Errors) != 0 {
 			t.Errorf("expected no errors, got: %v", body.Errors)
 		}
 		want := "pong"
 		if body.Data.Ping != want {
 			t.Errorf("expected ping %s, got: %s", want, body.Data.Ping)
+		}
+	})
+	t.Run("pong request should fail", func(t *testing.T) {
+		server, err := testServer(t, slog.LevelDebug, io.Discard)
+		if err != nil {
+			t.Fatalf("failed to create test server: %s", err)
+		}
+		server.routes(t.Context())
+
+		req := httptest.NewRequest(http.MethodGet, "/pong", nil)
+		recorder := httptest.NewRecorder()
+		server.mux.ServeHTTP(recorder, req)
+
+		if recorder.Code != http.StatusNotFound {
+			t.Errorf("expected status code %d, got: %d", http.StatusNotFound, recorder.Code)
 		}
 	})
 }
@@ -184,11 +199,11 @@ func TestServer_HandlerAPITokenGet(t *testing.T) {
 
 		type response struct {
 			Success    bool          `json:"success"`
-			StatusCode int           `json:"statusCode"`
+			StatusCode int           `json:"status_code"`
 			Status     string        `json:"status"`
 			Message    string        `json:"message,omitempty"`
 			Timestamp  time.Time     `json:"timestamp"`
-			RequestID  string        `json:"requestId,omitempty"`
+			RequestID  string        `json:"request_id,omitempty"`
 			Data       TokenResponse `json:"data,omitempty"`
 			Errors     []string      `json:"errors,omitempty"`
 		}
@@ -369,11 +384,11 @@ func TestServer_HandlerAPITokenGet(t *testing.T) {
 
 		type response struct {
 			Success    bool          `json:"success"`
-			StatusCode int           `json:"statusCode"`
+			StatusCode int           `json:"status_code"`
 			Status     string        `json:"status"`
 			Message    string        `json:"message,omitempty"`
 			Timestamp  time.Time     `json:"timestamp"`
-			RequestID  string        `json:"requestId,omitempty"`
+			RequestID  string        `json:"request_id,omitempty"`
 			Data       TokenResponse `json:"data,omitempty"`
 			Errors     []string      `json:"errors,omitempty"`
 		}
@@ -575,11 +590,11 @@ func TestServer_HandlerAPISendFormPost(t *testing.T) {
 
 		type sendResponse struct {
 			Success    bool         `json:"success"`
-			StatusCode int          `json:"statusCode"`
+			StatusCode int          `json:"status_code"`
 			Status     string       `json:"status"`
 			Message    string       `json:"message,omitempty"`
 			Timestamp  time.Time    `json:"timestamp"`
-			RequestID  string       `json:"requestId,omitempty"`
+			RequestID  string       `json:"request_id,omitempty"`
 			Data       SendResponse `json:"data,omitempty"`
 			Errors     []string     `json:"errors,omitempty"`
 		}

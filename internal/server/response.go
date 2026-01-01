@@ -9,16 +9,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
 )
 
 type Response struct {
 	Success    bool      `json:"success"`
-	StatusCode int       `json:"statusCode"`
+	StatusCode int       `json:"status_code"`
 	Status     string    `json:"status"`
 	Message    string    `json:"message,omitempty"`
 	Timestamp  time.Time `json:"timestamp"`
-	RequestID  string    `json:"requestId,omitempty"`
+	RequestID  string    `json:"request_id,omitempty"`
 	Data       any       `json:"data,omitempty"`
 	Errors     []string  `json:"errors,omitempty"`
 }
@@ -31,6 +32,7 @@ func (re *Response) Render(_ http.ResponseWriter, r *http.Request) error {
 	if re.Timestamp.IsZero() {
 		re.Timestamp = time.Now().UTC()
 	}
+	re.RequestID = middleware.GetReqID(r.Context())
 	return nil
 }
 
