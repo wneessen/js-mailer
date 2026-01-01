@@ -6,10 +6,15 @@ package logger
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 func TestNew(t *testing.T) {
@@ -84,6 +89,20 @@ func TestErr(t *testing.T) {
 		log := NewLogger(slog.LevelError, "text", buf)
 		log.Error("something went wrong", Err(errors.New("test error")))
 		want := `level=ERROR msg="something went wrong" error="test error"`
+		if !strings.Contains(buf.String(), want) {
+			t.Errorf("expected error to contain %q, got %q", want, buf.String())
+		}
+	})
+}
+
+func TestRequestID(t *testing.T) {
+	t.Run("request ID is and returned", func(t *testing.T) {
+		buf := bytes.NewBuffer(nil)
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		ctx := context.WithValue(t.Context(), middleware.RequestIDKey, "test")
+		log := NewLogger(slog.LevelDebug, "text", buf)
+		log.Debug("test", RequestID(req.WithContext(ctx)))
+		want := `level=DEBUG msg=test request_id=test`
 		if !strings.Contains(buf.String(), want) {
 			t.Errorf("expected error to contain %q, got %q", want, buf.String())
 		}
