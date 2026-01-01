@@ -26,7 +26,6 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 
 	"github.com/wneessen/js-mailer/internal/cache"
 	"github.com/wneessen/js-mailer/internal/config"
@@ -109,14 +108,10 @@ func TestServer_HandlerAPIPingGet(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to create test server: %s", err)
 		}
-
-		router := chi.NewRouter()
-		router.Use(middleware.RequestID)
-		router.Get("/ping", server.HandlerAPIPingGet)
-
+		server.routes(t.Context())
 		req := httptest.NewRequest(http.MethodGet, "/ping", nil)
 		recorder := httptest.NewRecorder()
-		router.ServeHTTP(recorder, req)
+		server.mux.ServeHTTP(recorder, req)
 
 		if recorder.Code != http.StatusOK {
 			t.Errorf("expected status code %d, got: %d", http.StatusOK, recorder.Code)
@@ -162,6 +157,22 @@ func TestServer_HandlerAPIPingGet(t *testing.T) {
 		want := "pong"
 		if body.Data.Ping != want {
 			t.Errorf("expected ping %s, got: %s", want, body.Data.Ping)
+		}
+	})
+	t.Run("pong request should fail", func(t *testing.T) {
+
+		server, err := testServer(t, slog.LevelDebug, io.Discard)
+		if err != nil {
+			t.Fatalf("failed to create test server: %s", err)
+		}
+		server.routes(t.Context())
+
+		req := httptest.NewRequest(http.MethodGet, "/pong", nil)
+		recorder := httptest.NewRecorder()
+		server.mux.ServeHTTP(recorder, req)
+
+		if recorder.Code != http.StatusNotFound {
+			t.Errorf("expected status code %d, got: %d", http.StatusNotFound, recorder.Code)
 		}
 	})
 }
