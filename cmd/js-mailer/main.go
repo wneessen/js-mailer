@@ -53,7 +53,7 @@ func main() {
 	}
 
 	// Initialize a logger based on the config
-	log := logger.New(conf.Log.Level, conf.Log.Format)
+	log := logger.New(conf.Log.Level, logger.Opts{Format: conf.Log.Format, DontLogIP: conf.Log.DontLogIP})
 
 	// Initialize server instance
 	srv := server.New(conf, log, version)

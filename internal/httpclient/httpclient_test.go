@@ -28,7 +28,7 @@ type testType struct {
 const testFile = "../../testdata/testtype.json"
 
 func TestNew(t *testing.T) {
-	client := New(logger.New(slog.LevelInfo, "text"))
+	client := New(logger.New(slog.LevelInfo, logger.Opts{Format: "text"}))
 	if client == nil {
 		t.Fatal("expected client to be non-nil")
 	}
@@ -49,7 +49,7 @@ func TestClient_Get(t *testing.T) {
 			}, nil
 		}
 
-		client := New(logger.New(slog.LevelInfo, "text"))
+		client := New(logger.New(slog.LevelInfo, logger.Opts{Format: "text"}))
 		client.Transport = testhelper.MockRoundTripper{Fn: rtFn}
 		query := url.Values{}
 		query.Add("key", "value")
@@ -79,7 +79,7 @@ func TestClient_Get(t *testing.T) {
 		}
 	})
 	t.Run("unmarshalling into non-pointer should fail", func(t *testing.T) {
-		client := New(logger.New(slog.LevelInfo, "text"))
+		client := New(logger.New(slog.LevelInfo, logger.Opts{Format: "text"}))
 		var target testType
 		_, err := client.Get(t.Context(), "https://example.com", target, nil, nil)
 		if err == nil {
@@ -90,7 +90,7 @@ func TestClient_Get(t *testing.T) {
 		}
 	})
 	t.Run("parsing an invalid url should fail", func(t *testing.T) {
-		client := New(logger.New(slog.LevelInfo, "text"))
+		client := New(logger.New(slog.LevelInfo, logger.Opts{Format: "text"}))
 		target := new(testType)
 		_, err := client.Get(t.Context(), "https://example.com/xyz%", target, nil, nil)
 		if err == nil {
@@ -105,7 +105,7 @@ func TestClient_Get(t *testing.T) {
 			return nil, errors.New("intentionally failing")
 		}
 
-		client := New(logger.New(slog.LevelInfo, "text"))
+		client := New(logger.New(slog.LevelInfo, logger.Opts{Format: "text"}))
 		client.Transport = testhelper.MockRoundTripper{Fn: rtFn}
 
 		target := new(testType)
@@ -123,7 +123,7 @@ func TestClient_Get(t *testing.T) {
 			}, nil
 		}
 
-		client := New(logger.NewLogger(slog.LevelInfo, "text", io.Discard))
+		client := New(logger.NewLogger(slog.LevelInfo, io.Discard, logger.Opts{Format: "text"}))
 		client.Transport = testhelper.MockRoundTripper{Fn: rtFn}
 
 		target := new(testType)
@@ -149,7 +149,7 @@ func TestClient_Post(t *testing.T) {
 			}, nil
 		}
 
-		client := New(logger.New(slog.LevelInfo, "text"))
+		client := New(logger.New(slog.LevelInfo, logger.Opts{Format: "text"}))
 		client.Transport = testhelper.MockRoundTripper{Fn: rtFn}
 
 		target := new(testType)

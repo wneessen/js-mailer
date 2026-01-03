@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	testLogLevel               = 0
+	testLogLevel               = -4
 	testLogFormat              = "json"
 	testFormsPath              = "../../testdata"
 	testFormsDefaultExpiration = time.Minute * 15

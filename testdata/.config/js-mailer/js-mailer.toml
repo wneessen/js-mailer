@@ -3,8 +3,9 @@ type = "inmemory"
 lifetime = "30m"
 
 [log]
-level = 0
+level = -4
 format = "json"
+dont_log_ip = true
 
 [forms]
 path = "testdata"

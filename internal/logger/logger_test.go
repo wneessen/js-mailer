@@ -21,7 +21,7 @@ func TestNew(t *testing.T) {
 	t.Run("return a text logger", func(t *testing.T) {
 		for _, level := range []slog.Level{slog.LevelDebug, slog.LevelInfo, slog.LevelWarn, slog.LevelError} {
 			t.Run("log level "+level.String(), func(t *testing.T) {
-				log := New(level, "text")
+				log := New(level, Opts{Format: "text"})
 				if log == nil {
 					t.Fatal("logger is nil")
 				}
@@ -31,7 +31,7 @@ func TestNew(t *testing.T) {
 	t.Run("return a json logger", func(t *testing.T) {
 		for _, level := range []slog.Level{slog.LevelDebug, slog.LevelInfo, slog.LevelWarn, slog.LevelError} {
 			t.Run("log level "+level.String(), func(t *testing.T) {
-				log := New(level, "json")
+				log := New(level, Opts{Format: "json"})
 				if log == nil {
 					t.Fatal("logger is nil")
 				}
@@ -58,7 +58,7 @@ func TestNewLogger(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				buf := bytes.NewBuffer(nil)
-				log := NewLogger(tt.level, "text", buf)
+				log := NewLogger(tt.level, buf, Opts{Format: "text"})
 				if log == nil {
 					t.Fatal("logger is nil")
 				}
@@ -81,12 +81,48 @@ func TestNewLogger(t *testing.T) {
 			})
 		}
 	})
+	t.Run("new logger with disabled IP logging", func(t *testing.T) {
+		tests := []struct {
+			name string
+			ip   string
+			want string
+		}{
+			{"IPv4", "192.168.123.123", "192.168.0.0"},
+			{"IPv6", "2345:0425:2CA1:0000:0000:0567:5673:23b5", "2345:425:2ca1::"},
+			{"No IP given", "invalid", "0.0.0.0"},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				buf := bytes.NewBuffer(nil)
+				log := NewLogger(slog.LevelDebug, buf, Opts{Format: "text", DontLogIP: true})
+				if log == nil {
+					t.Fatal("logger is nil")
+				}
+				log.Debug("debug", slog.String("client.ip", tt.ip))
+				output := strings.TrimSpace(buf.String())
+				if !strings.HasSuffix(output, "client.ip="+tt.want) {
+					t.Errorf("expected client IP to be %q, got %q", tt.want, output)
+				}
+			})
+		}
+	})
+	t.Run("new logger with disabled request IP logging and empty string", func(t *testing.T) {
+		buf := bytes.NewBuffer(nil)
+		log := NewLogger(slog.LevelDebug, buf, Opts{Format: "text", DontLogIP: true})
+		if log == nil {
+			t.Fatal("logger is nil")
+		}
+		log.Debug("debug", "", "")
+		output := strings.TrimSpace(buf.String())
+		t.Log(output)
+	})
 }
 
 func TestErr(t *testing.T) {
 	t.Run("errors are logged properly", func(t *testing.T) {
 		buf := bytes.NewBuffer(nil)
-		log := NewLogger(slog.LevelError, "text", buf)
+		log := NewLogger(slog.LevelError, buf, Opts{Format: "text"})
 		log.Error("something went wrong", Err(errors.New("test error")))
 		want := `level=ERROR msg="something went wrong" error="test error"`
 		if !strings.Contains(buf.String(), want) {
@@ -100,7 +136,7 @@ func TestRequestID(t *testing.T) {
 		buf := bytes.NewBuffer(nil)
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		ctx := context.WithValue(t.Context(), middleware.RequestIDKey, "test")
-		log := NewLogger(slog.LevelDebug, "text", buf)
+		log := NewLogger(slog.LevelDebug, buf, Opts{Format: "text"})
 		log.Debug("test", RequestID(req.WithContext(ctx)))
 		want := `level=DEBUG msg=test request_id=test`
 		if !strings.Contains(buf.String(), want) {

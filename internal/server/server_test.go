@@ -47,7 +47,7 @@ func TestNew(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to create config: %s", err)
 		}
-		log := logger.New(slog.LevelError, "text")
+		log := logger.New(slog.LevelError, logger.Opts{Format: "text"})
 		server := New(conf, log, testVersion)
 		if server == nil {
 			t.Fatal("server is nil")
@@ -1444,7 +1444,7 @@ func testServer(t *testing.T, level slog.Level, output io.Writer) (*Server, erro
 	t.Helper()
 
 	// Create server
-	log := logger.NewLogger(level, "json", output)
+	log := logger.NewLogger(level, output, logger.Opts{Format: "json"})
 	conf, err := config.New()
 	if err != nil {
 		t.Fatalf("failed to create config: %s", err)
