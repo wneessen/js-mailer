@@ -7,6 +7,7 @@ package logger
 import (
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -14,20 +15,61 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
+const (
+	IPv4HideMask = 16
+	IPv6HideMask = 48
+)
+
 type Logger struct {
 	*slog.Logger
 }
 
-func New(level slog.Level, format string) *Logger {
-	return NewLogger(level, format, os.Stderr)
+type Opts struct {
+	Format    string
+	DontLogIP bool
 }
 
-func NewLogger(level slog.Level, format string, output io.Writer) *Logger {
-	switch strings.ToLower(format) {
+func New(level slog.Level, opts Opts) *Logger {
+	return NewLogger(level, os.Stderr, opts)
+}
+
+func NewLogger(level slog.Level, output io.Writer, opts Opts) *Logger {
+	replaceattr := func(groups []string, a slog.Attr) slog.Attr {
+		return a
+	}
+	if opts.DontLogIP {
+		replaceattr = func(groups []string, a slog.Attr) slog.Attr {
+			if len(groups) > 0 {
+				return a
+			}
+			switch a.Key {
+			case "client.ip":
+				ip := net.ParseIP(a.Value.String())
+				switch {
+				case ip.To4() != nil:
+					ip = ip.Mask(net.CIDRMask(IPv4HideMask, 32))
+				case ip.To16() != nil:
+					ip = ip.Mask(net.CIDRMask(IPv6HideMask, 128))
+				default:
+					ip = net.IPv4zero
+				}
+				return slog.String("client.ip", ip.String())
+			}
+			return a
+		}
+	}
+
+	switch strings.ToLower(opts.Format) {
 	case "text":
-		return &Logger{slog.New(slog.NewTextHandler(output, &slog.HandlerOptions{Level: level}))}
+		return &Logger{slog.New(slog.NewTextHandler(output, &slog.HandlerOptions{
+			ReplaceAttr: replaceattr,
+			Level:       level,
+		}))}
 	default:
-		return &Logger{slog.New(slog.NewJSONHandler(output, &slog.HandlerOptions{Level: level}))}
+		return &Logger{slog.New(slog.NewJSONHandler(output, &slog.HandlerOptions{
+			ReplaceAttr: replaceattr,
+			Level:       level,
+		}))}
 	}
 }
 

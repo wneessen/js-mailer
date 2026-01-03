@@ -21,7 +21,7 @@ func TestNew(t *testing.T) {
 	t.Run("return a text logger", func(t *testing.T) {
 		for _, level := range []slog.Level{slog.LevelDebug, slog.LevelInfo, slog.LevelWarn, slog.LevelError} {
 			t.Run("log level "+level.String(), func(t *testing.T) {
-				log := New(level, "text")
+				log := New(level, Opts{Format: "text"})
 				if log == nil {
 					t.Fatal("logger is nil")
 				}
@@ -31,7 +31,7 @@ func TestNew(t *testing.T) {
 	t.Run("return a json logger", func(t *testing.T) {
 		for _, level := range []slog.Level{slog.LevelDebug, slog.LevelInfo, slog.LevelWarn, slog.LevelError} {
 			t.Run("log level "+level.String(), func(t *testing.T) {
-				log := New(level, "json")
+				log := New(level, Opts{Format: "json"})
 				if log == nil {
 					t.Fatal("logger is nil")
 				}
@@ -58,7 +58,7 @@ func TestNewLogger(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				buf := bytes.NewBuffer(nil)
-				log := NewLogger(tt.level, "text", buf)
+				log := NewLogger(tt.level, buf, Opts{Format: "text"})
 				if log == nil {
 					t.Fatal("logger is nil")
 				}
@@ -86,7 +86,7 @@ func TestNewLogger(t *testing.T) {
 func TestErr(t *testing.T) {
 	t.Run("errors are logged properly", func(t *testing.T) {
 		buf := bytes.NewBuffer(nil)
-		log := NewLogger(slog.LevelError, "text", buf)
+		log := NewLogger(slog.LevelError, buf, Opts{Format: "text"})
 		log.Error("something went wrong", Err(errors.New("test error")))
 		want := `level=ERROR msg="something went wrong" error="test error"`
 		if !strings.Contains(buf.String(), want) {
@@ -100,7 +100,7 @@ func TestRequestID(t *testing.T) {
 		buf := bytes.NewBuffer(nil)
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		ctx := context.WithValue(t.Context(), middleware.RequestIDKey, "test")
-		log := NewLogger(slog.LevelDebug, "text", buf)
+		log := NewLogger(slog.LevelDebug, buf, Opts{Format: "text"})
 		log.Debug("test", RequestID(req.WithContext(ctx)))
 		want := `level=DEBUG msg=test request_id=test`
 		if !strings.Contains(buf.String(), want) {

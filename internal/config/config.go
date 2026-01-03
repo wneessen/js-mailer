@@ -23,8 +23,9 @@ type Config struct {
 		Lifetime time.Duration `fig:"lifetime" default:"10m"`
 	}
 	Log struct {
-		Level  slog.Level `fig:"level" default:"0"`
-		Format string     `fig:"format" default:"json"`
+		Level     slog.Level `fig:"level" default:"0"`
+		Format    string     `fig:"format" default:"json"`
+		DontLogIP bool       `fig:"dont_log_ip"`
 	}
 
 	Forms struct {
