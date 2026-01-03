@@ -81,6 +81,42 @@ func TestNewLogger(t *testing.T) {
 			})
 		}
 	})
+	t.Run("new logger with disabled IP logging", func(t *testing.T) {
+		tests := []struct {
+			name string
+			ip   string
+			want string
+		}{
+			{"IPv4", "192.168.123.123", "192.168.0.0"},
+			{"IPv6", "2345:0425:2CA1:0000:0000:0567:5673:23b5", "2345:425:2ca1::"},
+			{"No IP given", "invalid", "0.0.0.0"},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				buf := bytes.NewBuffer(nil)
+				log := NewLogger(slog.LevelDebug, buf, Opts{Format: "text", DontLogIP: true})
+				if log == nil {
+					t.Fatal("logger is nil")
+				}
+				log.Debug("debug", slog.String("client.ip", tt.ip))
+				output := strings.TrimSpace(buf.String())
+				if !strings.HasSuffix(output, "client.ip="+tt.want) {
+					t.Errorf("expected client IP to be %q, got %q", tt.want, output)
+				}
+			})
+		}
+	})
+	t.Run("new logger with disabled request IP logging and empty string", func(t *testing.T) {
+		buf := bytes.NewBuffer(nil)
+		log := NewLogger(slog.LevelDebug, buf, Opts{Format: "text", DontLogIP: true})
+		if log == nil {
+			t.Fatal("logger is nil")
+		}
+		log.Debug("debug", "", "")
+		output := strings.TrimSpace(buf.String())
+		t.Log(output)
+	})
 }
 
 func TestErr(t *testing.T) {

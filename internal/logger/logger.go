@@ -39,9 +39,6 @@ func NewLogger(level slog.Level, output io.Writer, opts Opts) *Logger {
 	}
 	if opts.DontLogIP {
 		replaceattr = func(groups []string, a slog.Attr) slog.Attr {
-			if len(groups) > 0 {
-				return a
-			}
 			switch a.Key {
 			case "client.ip":
 				ip := net.ParseIP(a.Value.String())
