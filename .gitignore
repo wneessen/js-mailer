@@ -26,3 +26,4 @@ docker-images
 .idea
 tmp
 dist
+/mise.toml

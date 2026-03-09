@@ -46,3 +46,11 @@ paths = [
   'builtin$',
   'examples$'
 ]
+
+## False positive, strings.Builder cannot be used as io.Writer for fmt.Fprintf
+[[linters.exclusions.rules]]
+linters = [
+    'staticcheck'
+]
+path = 'internal/server/sendmail.go'
+text = 'QF1012:'
