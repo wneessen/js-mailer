@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 ## Build first
-FROM --platform=${BUILDPLATFORM} golang:latest@sha256:b54cbf583d390341599d7bcbc062425c081105cc5ef6d170ced98ef9d047c716 AS builder
+FROM --platform=${BUILDPLATFORM} golang:latest@sha256:313faae491b410a35402c05d35e7518ae99103d957308e940e1ae2cfa0aac29b AS builder
 RUN mkdir /builddir
 ADD . /builddir/
 WORKDIR /builddir
