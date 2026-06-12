@@ -43,7 +43,7 @@ func (s *Server) routes(_ context.Context) {
 	// Register middleware
 	s.mux.Use(s.serverHeader)
 	s.mux.Use(middleware.RequestID)
-	s.mux.Use(middleware.RealIP)
+	s.mux.Use(middleware.ClientIPFromHeader("X-Real-IP"))
 	s.mux.Use(middleware.StripSlashes)
 	s.mux.Use(middleware.Compress(5))
 	s.mux.Use(logHandler)
