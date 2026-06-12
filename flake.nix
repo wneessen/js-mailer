@@ -18,13 +18,13 @@
       # Pre-built binary release (goreleaser tar.gz)
       binSrc = pkgs.fetchurl {
         url = "https://github.com/${owner}/${repo}/releases/download/v${version}/js-mailer_${version}_linux_amd64.tar.gz";
-        hash = "sha256-UgpEXNqAWuaxOtEldrnQas5rv3oFJCLnrtm2/9qz7Vc=";
+        hash = "sha256-QCFfCLXHdKTZ3cHHESTCI9qFnvU1Vaxv8naVUcloGgY=";
       };
 
       # Source tarball for config, icons, docs, and license
       sourceSrc = pkgs.fetchurl {
         url = "https://github.com/${owner}/${repo}/archive/refs/tags/v${version}.tar.gz";
-        hash = "sha256-MXQ6LY/9F2CJJh6PsvbMsAsxtaQHxr0dX17zlM9PEr8=";
+        hash = "sha256-JCAmVBPcV5WX8q/ACHE1B0M3hsOwhs2jWbP2FxJYPx0=";
       };
     in
     {
