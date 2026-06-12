@@ -13,18 +13,18 @@
 
       owner = "wneessen";
       repo = "js-mailer";
-      version = "1.1.0";
+      version = "1.1.1";
 
       # Pre-built binary release (goreleaser tar.gz)
       binSrc = pkgs.fetchurl {
         url = "https://github.com/${owner}/${repo}/releases/download/v${version}/js-mailer_${version}_linux_amd64.tar.gz";
-        hash = "sha256-QCFfCLXHdKTZ3cHHESTCI9qFnvU1Vaxv8naVUcloGgY=";
+        hash = "sha256-nzdmN3L/nZEZFl3DOaKA064Sr8PXrws8Pv3NBRBjWlk=";
       };
 
       # Source tarball for config, icons, docs, and license
       sourceSrc = pkgs.fetchurl {
         url = "https://github.com/${owner}/${repo}/archive/refs/tags/v${version}.tar.gz";
-        hash = "sha256-JCAmVBPcV5WX8q/ACHE1B0M3hsOwhs2jWbP2FxJYPx0=";
+        hash = "sha256-eCur6t7Z2iT4gJuCMPP8ImFazddLpOmWmABpjXet+Sc=";
       };
     in
     {
