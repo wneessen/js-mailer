@@ -27,3 +27,5 @@ docker-images
 tmp
 dist
 /mise.toml
+.env
+result
