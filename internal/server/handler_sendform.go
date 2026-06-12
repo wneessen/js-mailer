@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
 
 	"github.com/wneessen/js-mailer/internal/cache"
@@ -151,7 +152,11 @@ func (s *Server) HandlerAPISendFormPost(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Check form submission against the configured captcha provider
-	if err = s.validateCaptcha(r.Context(), form, r.MultipartForm.Value, r.RemoteAddr); err != nil {
+	clientIP := r.RemoteAddr
+	if val := middleware.GetClientIP(r.Context()); val != "" {
+		clientIP = val
+	}
+	if err = s.validateCaptcha(r.Context(), form, r.MultipartForm.Value, clientIP); err != nil {
 		log.Error("captcha validation failed", logger.Err(err))
 		_ = render.Render(w, r, ErrNotFound(ErrCaptchaValidationFailed))
 		return
