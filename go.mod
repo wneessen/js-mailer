@@ -3,7 +3,7 @@ module github.com/wneessen/js-mailer
 go 1.25.1
 
 require (
-	github.com/go-chi/chi/v5 v5.3.0
+	github.com/go-chi/chi/v5 v5.3.1
 	github.com/go-chi/httplog/v3 v3.4.0
 	github.com/go-chi/render v1.0.3
 	github.com/kkyr/fig v0.5.0
