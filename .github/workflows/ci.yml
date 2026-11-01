@@ -19,132 +19,132 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}
 
 jobs:
-    lint:
-        name: golangci-lint (${{ matrix.go }})
-        runs-on: ubuntu-latest
-        concurrency:
-            group: ci-lint-${{ matrix.go }}
-            cancel-in-progress: true
-        strategy:
-            matrix:
-                go: ['1.25']
-        steps:
-            - name: Harden Runner
-              uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
-              with:
-                  egress-policy: audit
-            - name: Setup go
-              uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v5.6.0
-              with:
-                  go-version: ${{ matrix.go }}
-                  check-latest: true
-            - name: Checkout Code
-              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # master
-            - name: golangci-lint
-              uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
-              with:
-                  version: latest
-    dependency-review:
-        name: Dependency review
-        runs-on: ubuntu-latest
-        concurrency:
-            group: ci-dependency-review
-            cancel-in-progress: true
-        steps:
-            - name: Harden Runner
-              uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
-              with:
-                  egress-policy: audit
-            - name: Checkout Code
-              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # master
-            - name: 'Dependency Review'
-              uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
-              with:
-                  base-ref: ${{ github.event.pull_request.base.sha || 'main' }}
-                  head-ref: ${{ github.event.pull_request.head.sha || github.ref }}
-    govulncheck:
-        name: Go vulnerabilities check
-        runs-on: ubuntu-latest
-        concurrency:
-            group: ci-govulncheck
-            cancel-in-progress: true
-        steps:
-            - name: Harden Runner
-              uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
-              with:
-                  egress-policy: audit
-            - name: Run govulncheck
-              uses: golang/govulncheck-action@032d45514ae346b1db93c04b0c90b841c370344f # v1.1.0
-    test:
-        name: Test (${{ matrix.os }} / ${{ matrix.go }})
-        runs-on: ${{ matrix.os }}
-        env:
-          JSMAILER_FORMS_PATH: ${{ vars.JSMAILER_FORMS_PATH }}
-        strategy:
-            fail-fast: false
-            matrix:
-                os: ['ubuntu-latest']
-                go: ['1.25']
-        steps:
-            - name: Harden Runner
-              uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
-              with:
-                  egress-policy: audit
-            - name: Checkout Code
-              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # master
-            - name: Setup go
-              uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v5.6.0
-              with:
-                  go-version: ${{ matrix.go }}
-            - name: Run go test
-              run: |
-                go test -race -shuffle=on ./...
-    reuse:
-        name: REUSE Compliance Check
-        runs-on: ubuntu-latest
-        concurrency:
-            group: ci-reuse
-            cancel-in-progress: true
-        steps:
-            - name: Harden Runner
-              uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
-              with:
-                  egress-policy: audit
-            - name: Checkout Code
-              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # master
-            - name: REUSE Compliance Check
-              uses: fsfe/reuse-action@676e2d560c9a403aa252096d99fcab3e1132b0f5 # v6.0.0
-    codecov:
-        name: Test with Codecov coverage (${{ matrix.os }} / ${{ matrix.go }})
-        runs-on: ${{ matrix.os }}
-        env:
-          PERFORM_INTEGRATION_TEST: ${{ vars.PERFORM_INTEGRATION_TEST }}
-          JSMAILER_FORMS_PATH: ${{ vars.JSMAILER_FORMS_PATH }}
-        concurrency:
-            group: ci-codecov-${{ matrix.os }}-${{ matrix.go }}
-            cancel-in-progress: true
-        strategy:
-            matrix:
-              os: [ ubuntu-latest ]
-              go: [ '1.25' ]
-        steps:
-          - name: Harden Runner
-            uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
-            with:
-              egress-policy: audit
-          - name: Checkout Code
-            uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # master
-          - name: Setup go
-            uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v5.6.0
-            with:
-              go-version: ${{ matrix.go }}
-              check-latest: true
-          - name: Run go test
-            if: success()
-            run: |
-              go test -race -shuffle=on --coverprofile=coverage.coverprofile --covermode=atomic ./...
-          - name: Upload coverage to Codecov
-            if: success()
-            uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
-            with:
-              token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
+  lint:
+    name: golangci-lint (${{ matrix.go }})
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ci-lint-${{ matrix.go }}
+      cancel-in-progress: true
+    strategy:
+      matrix:
+        go: ["1.27"]
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+        with:
+          egress-policy: audit
+      - name: Setup go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v5.6.0
+        with:
+          go-version: ${{ matrix.go }}
+          check-latest: true
+      - name: Checkout Code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # master
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: latest
+  dependency-review:
+    name: Dependency review
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ci-dependency-review
+      cancel-in-progress: true
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+        with:
+          egress-policy: audit
+      - name: Checkout Code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # master
+      - name: "Dependency Review"
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          base-ref: ${{ github.event.pull_request.base.sha || 'main' }}
+          head-ref: ${{ github.event.pull_request.head.sha || github.ref }}
+  govulncheck:
+    name: Go vulnerabilities check
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ci-govulncheck
+      cancel-in-progress: true
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+        with:
+          egress-policy: audit
+      - name: Run govulncheck
+        uses: golang/govulncheck-action@032d45514ae346b1db93c04b0c90b841c370344f # v1.1.0
+  test:
+    name: Test (${{ matrix.os }} / ${{ matrix.go }})
+    runs-on: ${{ matrix.os }}
+    env:
+      JSMAILER_FORMS_PATH: ${{ vars.JSMAILER_FORMS_PATH }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest"]
+        go: ["1.27"]
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+        with:
+          egress-policy: audit
+      - name: Checkout Code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # master
+      - name: Setup go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v5.6.0
+        with:
+          go-version: ${{ matrix.go }}
+      - name: Run go test
+        run: |
+          go test -race -shuffle=on ./...
+  reuse:
+    name: REUSE Compliance Check
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ci-reuse
+      cancel-in-progress: true
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+        with:
+          egress-policy: audit
+      - name: Checkout Code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # master
+      - name: REUSE Compliance Check
+        uses: fsfe/reuse-action@676e2d560c9a403aa252096d99fcab3e1132b0f5 # v6.0.0
+  codecov:
+    name: Test with Codecov coverage (${{ matrix.os }} / ${{ matrix.go }})
+    runs-on: ${{ matrix.os }}
+    env:
+      PERFORM_INTEGRATION_TEST: ${{ vars.PERFORM_INTEGRATION_TEST }}
+      JSMAILER_FORMS_PATH: ${{ vars.JSMAILER_FORMS_PATH }}
+    concurrency:
+      group: ci-codecov-${{ matrix.os }}-${{ matrix.go }}
+      cancel-in-progress: true
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        go: ["1.27"]
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+        with:
+          egress-policy: audit
+      - name: Checkout Code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # master
+      - name: Setup go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v5.6.0
+        with:
+          go-version: ${{ matrix.go }}
+          check-latest: true
+      - name: Run go test
+        if: success()
+        run: |
+          go test -race -shuffle=on --coverprofile=coverage.coverprofile --covermode=atomic ./...
+      - name: Upload coverage to Codecov
+        if: success()
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos

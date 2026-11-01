@@ -1,22 +1,22 @@
 module github.com/wneessen/js-mailer
 
-go 1.25.1
+go 1.27.3
 
 require (
 	github.com/go-chi/chi/v5 v5.5.0
-	github.com/go-chi/httplog/v3 v3.4.0
+	github.com/go-chi/httplog/v3 v3.5.0
 	github.com/go-chi/render v1.0.3
 	github.com/kkyr/fig v0.5.0
 	github.com/wneessen/go-mail v0.8.1
 )
 
 require (
-	github.com/ajg/form v1.5.1 // indirect
+	github.com/ajg/form v1.9.0 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
-	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
-	golang.org/x/crypto v0.54.0 // indirect
-	golang.org/x/text v0.40.0 // indirect
+	github.com/pelletier/go-toml/v2 v2.4.3 // indirect
+	golang.org/x/crypto v0.58.0 // indirect
+	golang.org/x/text v0.43.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
