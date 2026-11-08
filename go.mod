@@ -7,7 +7,7 @@ require (
 	github.com/go-chi/httplog/v3 v3.5.0
 	github.com/go-chi/render v1.0.3
 	github.com/kkyr/fig v0.5.0
-	github.com/wneessen/go-mail v0.8.1
+	github.com/wneessen/go-mail v0.8.2
 )
 
 require (
