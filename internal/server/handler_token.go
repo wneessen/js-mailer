@@ -72,7 +72,7 @@ func (s *Server) HandlerAPITokenGet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	schema := "http"
-	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
+	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" || s.config.Server.ForceHTTPS {
 		schema = "https"
 	}
 	now := time.Now()
