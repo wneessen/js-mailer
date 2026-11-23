@@ -37,6 +37,7 @@ type Config struct {
 		BindAddress string        `fig:"address" default:"127.0.0.1"`
 		BindPort    string        `fig:"port" default:"8765"`
 		Timeout     time.Duration `fig:"timeout" default:"15s"`
+		ForceHTTPS  bool          `fig:"force_https"`
 	} `fig:"server"`
 }
 
